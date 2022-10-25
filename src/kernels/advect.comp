@@ -10,7 +10,14 @@ uniform layout(location=0) float dt;
 float bilinear(sampler2D img, vec2 pt) {
     vec2 size = imageSize(write_u);
     vec2 tex_coord = (pt + vec2(0.5)) / size;
-    return texture(img, tex_coord).x;
+    //return texture(img, tex_coord).x;
+    vec4 corners = textureGather(img, tex_coord);
+    vec2 f = fract(pt + 0.5);
+    return mix(
+        mix(corners.x, corners.y, f.x),
+        mix(corners.z, corners.w, f.x),
+        f.y
+    );
 }
 
 vec2 gradient(sampler2D img, vec2 pt) {
@@ -31,8 +38,8 @@ float advect_component(sampler2D img, vec2 gid, vec2 u_offset, vec2 v_offset) {
     vec2 dr = vec2(u, v) * dt;
     vec2 sample_loc = vec2(gid) - dr;
     float next = bilinear(img, sample_loc);
-    //vec2 c_u = gradient(img, u_sample_loc);
-    //next_u += dot(c_u, dr);
+    vec2 c = gradient(img, sample_loc);
+    //next += dot(c, dr);
     return next;
 }
 
