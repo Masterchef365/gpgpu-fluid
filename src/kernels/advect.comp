@@ -30,17 +30,16 @@ void main() {
 
     // Advect u
     float u, v;
-    vec2 k;
     u = bilinear(read_u, gid);
     v = bilinear(read_v, gid + vec2(0.5,-0.5));
-    k = vec2(gid) - vec2(u, v) * dt;
-    float next_u = bilinear(read_u, k).x;
+    vec2 u_sample_loc = vec2(gid) - vec2(u, v) * dt;
+    float next_u = bilinear(read_u, u_sample_loc).x;
 
     // Advect v
     u = bilinear(read_u, gid + vec2(-0.5,0.5)).x;
     v = bilinear(read_v, gid).x;
-    k = vec2(gid) - vec2(u, v) * dt;
-    float next_v = bilinear(read_v, k).x;
+    vec2 v_sample_loc = vec2(gid) - vec2(u, v) * dt;
+    float next_v = bilinear(read_v, v_sample_loc).x;
 
     vec2 vel = vec2(next_u, next_v);
     //vel += float(length(uv) < 0.2) * vec2(0.2, 0);
