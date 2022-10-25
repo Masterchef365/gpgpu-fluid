@@ -11,8 +11,14 @@ float bilinear(sampler2D img, vec2 pt) {
     vec2 size = imageSize(write_u);
     vec2 tex_coord = (pt + vec2(0.5)) / size;
     //return texture(img, tex_coord).x;
-    vec4 corners = textureGather(img, tex_coord);
-    vec2 f = fract(pt + 0.5);
+    //vec4 corners = textureGather(img, tex_coord);
+    vec4 corners = vec4(
+        texture(img, (floor(pt) + vec2(0.5) + vec2(0, 0)) / size).x,
+        texture(img, (floor(pt) + vec2(0.5) + vec2(1, 0)) / size).x,
+        texture(img, (floor(pt) + vec2(0.5) + vec2(0, 1)) / size).x,
+        texture(img, (floor(pt) + vec2(0.5) + vec2(1, 1)) / size).x
+    );
+    vec2 f = fract(pt);
     return mix(
         mix(corners.x, corners.y, f.x),
         mix(corners.z, corners.w, f.x),
