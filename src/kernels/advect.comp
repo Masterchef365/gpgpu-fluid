@@ -27,6 +27,17 @@ vec2 gradient(sampler2D img, vec2 pt) {
         + vec2(f.y, f.x) * corners.w;
 }
 
+float advect_component(sampler2D img, vec2 gid, vec2 u_offset, vec2 v_offset) {
+    float u = bilinear(read_u, gid + u_offset);
+    float v = bilinear(read_v, gid + v_offset);
+    vec2 dr = vec2(u, v) * dt;
+    vec2 sample_loc = vec2(gid) - dr;
+    float next = bilinear(img, sample_loc).x;
+    //vec2 c_u = gradient(img, u_sample_loc);
+    //next_u += dot(c_u, dr);
+    return next;
+}
+
 void main() {
     ivec2 gid = ivec2(gl_GlobalInvocationID.xy);
     vec2 size = vec2(imageSize(write_u));
@@ -35,36 +46,15 @@ void main() {
     uv = uv * 2. - 1.;
 
     if (dt == 9999.) {
-        //vec2 vel = float(length(uv) < 0.2) * vec2(0, -1);
         vec2 vel = vec2(0);
         imageStore(write_u, gid, vec4(vel.x, 0,0,0));
         imageStore(write_v, gid, vec4(vel.y, 0,0,0));
         return;
     }
 
-    // Advect u
-    float u, v;
-    u = bilinear(read_u, gid);
-    v = bilinear(read_v, gid + vec2(0.5,-0.5));
-    vec2 off_u = vec2(u, v) * dt;
-    vec2 u_sample_loc = vec2(gid) - off_u;
-    float next_u = bilinear(read_u, u_sample_loc).x;
-    vec2 c_u = gradient(read_u, u_sample_loc);
-    next_u += dot(c_u, off_u);
+    float next_u = advect_component(read_u, gid, vec2(0), vec2(0.5,-0.5));
+    float next_v = advect_component(read_v, gid, vec2(-0.5,0.5), vec2(0));
 
-    // Advect v
-    u = bilinear(read_u, gid + vec2(-0.5,0.5)).x;
-    v = bilinear(read_v, gid).x;
-    vec2 off_v = vec2(u, v) * dt;
-    vec2 v_sample_loc = vec2(gid) - off_v;
-    float next_v = bilinear(read_v, v_sample_loc).x;
-    vec2 c_v = gradient(read_v, v_sample_loc);
-    next_v += dot(c_v, off_v);
-
-    vec2 vel = vec2(next_u, next_v);
-    //vel += float(length(uv) < 0.2) * vec2(0.2, 0);
-
-    // Write semi-lagrangian calc
-    imageStore(write_u, gid, vec4(vel.x, 0,0,0));
-    imageStore(write_v, gid, vec4(vel.y, 0,0,0));
+    imageStore(write_u, gid, vec4(next_u, 0,0,0));
+    imageStore(write_v, gid, vec4(next_v, 0,0,0));
 }
