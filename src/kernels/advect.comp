@@ -32,7 +32,7 @@ float advect_component(sampler2D img, vec2 gid, vec2 u_offset, vec2 v_offset) {
     float v = bilinear(read_v, gid + v_offset);
     vec2 dr = vec2(u, v) * dt;
     vec2 sample_loc = vec2(gid) - dr;
-    float next = bilinear(img, sample_loc).x;
+    float next = bilinear(img, sample_loc);
     //vec2 c_u = gradient(img, u_sample_loc);
     //next_u += dot(c_u, dr);
     return next;
