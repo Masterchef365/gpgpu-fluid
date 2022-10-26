@@ -23,10 +23,19 @@ vec2 gradient(sampler2D img, vec2 pt) {
     );
 
     vec2 f = fract(pt);
-    return vec2(f.y - 1., f.x - 1.) * corners.x
-        + vec2(-f.y, 1. - f.x) * corners.y
-        + vec2(1. - f.y, -f.x) * corners.z
-        + vec2(f.y, f.x) * corners.w;
+    return mix(
+        mix(
+            vec2(f.y - 1., f.x - 1.) * corners.x,
+            vec2(1. - f.y, -f.x) * corners.y,
+            f.x
+        ),
+        mix(
+            vec2(-f.y, 1. - f.x) * corners.z,
+            vec2(f.y, f.x) * corners.w,
+            f.x
+        ),
+        f.y
+    );
 }
 
 float advect_component(sampler2D img, vec2 gid, vec2 u_offset, vec2 v_offset) {
@@ -36,7 +45,7 @@ float advect_component(sampler2D img, vec2 gid, vec2 u_offset, vec2 v_offset) {
     vec2 sample_loc = vec2(gid) - dr;
     float next = bilinear(img, sample_loc);
     vec2 c = gradient(img, sample_loc);
-    //next += dot(c, dr);
+    next += dot(c, dr);
     return next;
 }
 
