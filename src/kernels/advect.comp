@@ -30,14 +30,14 @@ vec2 gradient(sampler2D img, vec2 pt, vec2 dr) {
     return grad * float(all(lessThan(abs(dr), vec2(1))));
 }
 
-float advect_component(sampler2D img, vec2 gid, vec2 u_offset, vec2 v_offset) {
+float advect_component(sampler2D img, vec2 gid, vec2 u_offset, vec2 v_offset, bool comp) {
     float u = bilinear(read_u, gid + u_offset);
     float v = bilinear(read_v, gid + v_offset);
     vec2 dr = vec2(u, v) * dt;
-    vec2 sample_loc = vec2(gid) - dr;
+    vec2 sample_loc = vec2(gid) - dr + (comp ? u_offset : v_offset);
     float next = bilinear(img, sample_loc);
     vec2 c = gradient(img, sample_loc, dr);
-    //if (gid.x > imageSize(write_u).x/2) next -= dot(c, dr);
+    /*if (gid.x > imageSize(write_u).x/2)*/ next -= dot(c, dr);
     return next;
 }
 
@@ -50,15 +50,17 @@ void main() {
         vec2 uv = gid / size;
         uv = fract(uv * vec2(2., 1.));
         uv = uv * 2. - 1.;
-        vec2 vel = vec2(0., -8.) * float(abs(uv.x) < 0.1) * float(abs(uv.y) < 0.1);
+        vec2 vel = vec2(0., 8.)
+            * float(abs(uv.x) < 0.1)
+            * float(abs(uv.y) < 0.1);
 
         imageStore(write_u, gid, vec4(vel.x, 0,0,0));
         imageStore(write_v, gid, vec4(vel.y, 0,0,0));
         return;
     }
 
-    float next_u = advect_component(read_u, gid, vec2(0), vec2(0.5,-0.5));
-    float next_v = advect_component(read_v, gid, vec2(-0.5,0.5), vec2(0));
+    float next_u = advect_component(read_u, gid, vec2(0), vec2(-0.5,0.5), true);
+    float next_v = advect_component(read_v, gid, vec2(0.5,-0.5), vec2(0), false);
 
     imageStore(write_u, gid, vec4(next_u, 0,0,0));
     imageStore(write_v, gid, vec4(next_v, 0,0,0));
