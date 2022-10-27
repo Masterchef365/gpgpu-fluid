@@ -15,7 +15,7 @@ const WIDTH: i32 = 13 * LOCAL_SIZE;
 const HEIGHT: i32 = 8 * LOCAL_SIZE;
 const N_ITERS: u32 = 20;
 const MAX_FINGIES: usize = 5;
-const INITIAL_DT: f32 = 0.01;
+const INITIAL_DT: f32 = 0.1;
 
 const LEFT_RIGHT_DELTA_DT: f32 = INITIAL_DT;
 const UP_DOWN_DELTA_DT: f32 = INITIAL_DT * 10.;
