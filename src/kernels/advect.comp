@@ -13,7 +13,7 @@ float bilinear(sampler2D img, vec2 pt) {
     return texture(img, tex_coord).x;
 }
 
-vec2 gradient(sampler2D img, vec2 pt) {
+vec2 gradient(sampler2D img, vec2 pt, vec2 dr) {
     vec2 size = imageSize(write_u);
     vec4 corners = vec4(
         texture(img, (floor(pt) + vec2(0.5) + vec2(0, 0)) / size).x,
@@ -23,19 +23,11 @@ vec2 gradient(sampler2D img, vec2 pt) {
     );
 
     vec2 f = fract(pt);
-    return mix(
-        mix(
-            vec2(f.y - 1., f.x - 1.) * corners.x,
-            vec2(-f.y, 1. - f.x) * corners.y,
-            f.y
-        ),
-        mix(
-            vec2(1. - f.y, -f.x) * corners.z,
-            vec2(f.y, f.x) * corners.w,
-            f.y
-        ),
-        f.x
-    );
+    vec2 grad = vec2(f.y - 1., f.x - 1.) * corners.x
+              + vec2(-f.y, 1. - f.x) * corners.y
+              + vec2(1. - f.y, -f.x) * corners.z
+              + vec2(f.y, f.x) * corners.w;
+    return grad * vec2(lessThan(abs(dr), vec2(1)));
 }
 
 float advect_component(sampler2D img, vec2 gid, vec2 u_offset, vec2 v_offset) {
@@ -44,8 +36,8 @@ float advect_component(sampler2D img, vec2 gid, vec2 u_offset, vec2 v_offset) {
     vec2 dr = vec2(u, v) * dt;
     vec2 sample_loc = vec2(gid) - dr;
     float next = bilinear(img, sample_loc);
-    vec2 c = gradient(img, sample_loc);
-    next += dot(c, dr);
+    vec2 c = gradient(img, sample_loc, dr);
+    if (gid.x > imageSize(write_u).x/2) next -= dot(c, dr);
     return next;
 }
 
