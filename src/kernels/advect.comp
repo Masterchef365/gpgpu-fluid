@@ -17,11 +17,7 @@ void main() {
     ivec2 gid = ivec2(gl_GlobalInvocationID.xy);
     vec2 size = vec2(imageSize(write_u));
 
-    vec2 uv = gid / size;
-    uv = uv * 2. - 1.;
-
     if (dt == 9999.) {
-        //vec2 vel = float(length(uv) < 0.2) * vec2(0, -1);
         vec2 vel = vec2(0);
         imageStore(write_u, gid, vec4(vel.x, 0,0,0));
         imageStore(write_v, gid, vec4(vel.y, 0,0,0));
@@ -31,12 +27,12 @@ void main() {
     // Advect u
     float u, v;
     u = bilinear(read_u, gid);
-    v = bilinear(read_v, gid + vec2(0.5,-0.5));
+    v = bilinear(read_v, gid + vec2(-0.5, 0.5));
     vec2 u_sample_loc = vec2(gid) - vec2(u, v) * dt;
     float next_u = bilinear(read_u, u_sample_loc).x;
 
     // Advect v
-    u = bilinear(read_u, gid + vec2(-0.5,0.5)).x;
+    u = bilinear(read_u, gid + vec2(0.5, -0.5)).x;
     v = bilinear(read_v, gid).x;
     vec2 v_sample_loc = vec2(gid) - vec2(u, v) * dt;
     float next_v = bilinear(read_v, v_sample_loc).x;
