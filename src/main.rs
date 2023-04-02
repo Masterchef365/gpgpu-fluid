@@ -81,7 +81,7 @@ fn main() -> Result<()> {
                     gl.active_texture(gl::TEXTURE0);
                     gl.bind_texture(gl::TEXTURE_2D, Some(read_texture));
                     // Set write texture to binding=1
-                    gl.bind_image_texture(1, read_texture, 0, false, 0, gl::READ_WRITE, gl::RG32F);
+                    gl.bind_image_texture(1, write_texture, 0, false, 0, gl::READ_WRITE, gl::RG32F);
                     // Set particle buffer to binding=2
                     gl.bind_buffer_base(gl::SHADER_STORAGE_BUFFER, 2, Some(particle_buffer));
                     // Dispatch

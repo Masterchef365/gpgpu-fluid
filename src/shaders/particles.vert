@@ -1,11 +1,9 @@
 #version 450
 
-uniform layout(binding=0) sampler2D read_img;
 uniform layout(binding=1, rg32f) image2D write_img;
 layout(std430, binding=2) buffer Particles {
     vec2 particles[];
 };
-uniform layout(location=0) float dt;
 
 void main() {
     vec2 vert = particles[gl_VertexID] / vec2(imageSize(write_img));
