@@ -24,8 +24,8 @@ void main() {
         || last_state.y > size.y;
 
     if (do_reset || out_bounds) {
-        float rx = rand(vec2(2344., idx) / 1000);
-        float ry = rand(vec2(1244., idx) / 1000);
+        float rx = rand(last_state + vec2(2344., idx) / 1000);
+        float ry = rand(last_state + vec2(1244., idx) / 1000);
 
         particles[idx] = vec2(rx, ry) * size;
     }
