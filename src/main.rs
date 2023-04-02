@@ -61,6 +61,8 @@ fn main() -> Result<()> {
         gl.clear_color(0., 0., 0., 1.0);
         gl.enable(gl::VERTEX_PROGRAM_POINT_SIZE);
 
+        let mut dt = 0.;
+
         // Event loop
         event_loop.run(move |event, _, control_flow| {
             *control_flow = ControlFlow::Wait;
@@ -76,7 +78,7 @@ fn main() -> Result<()> {
                     gl.use_program(Some(particle_kernel));
                     // Set dt
                     let dt_loc = gl.get_uniform_location(particle_kernel, "dt");
-                    gl.uniform_1_f32(dt_loc.as_ref(), 0.);
+                    gl.uniform_1_f32(dt_loc.as_ref(), dt);
                     // Set read texture to binding=0
                     gl.active_texture(gl::TEXTURE0);
                     gl.bind_texture(gl::TEXTURE_2D, Some(read_texture));
@@ -94,6 +96,8 @@ fn main() -> Result<()> {
                     gl.use_program(Some(particle_shader));
                     gl.bind_vertex_array(Some(particle_vertex_array));
                     gl.draw_arrays(gl::POINTS, 0, N_PARTICLES);
+
+                    dt = 0.1;
 
                     window.swap_buffers().unwrap();
                 }
