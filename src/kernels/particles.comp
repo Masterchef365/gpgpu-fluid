@@ -36,4 +36,5 @@ void main() {
         particles[idx] = vec2(rx, ry) * size;
     }
 
-    particles[idx] -= advect(particles[idx]) * 0.1; }
+    particles[idx] = advect(particles[idx]); 
+}

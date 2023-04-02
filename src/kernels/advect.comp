@@ -15,9 +15,9 @@ void main() {
     ivec2 xy = ivec2(gl_GlobalInvocationID.xy);
 
     if (dt == 0.) {
-        if (xy == ivec2(imageSize(write_img))/2) {
-            imageStore(write_img, xy, vec4(100.));
-        }
+        //if (xy == ivec2(imageSize(write_img))/2) {
+            imageStore(write_img, xy, vec4(10.));
+        //}
         return;
     }
 
