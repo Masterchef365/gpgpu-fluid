@@ -77,18 +77,23 @@ fn main() -> Result<()> {
                     // Set dt
                     let dt_loc = gl.get_uniform_location(particle_kernel, "dt");
                     gl.uniform_1_f32(dt_loc.as_ref(), 0.);
-                    // Set particle buffer
-                    gl.bind_buffer_base(gl::SHADER_STORAGE_BUFFER, 0, Some(particle_buffer));
-                    // Set read texture
-                    gl.bind_texture(gl::TEXTURE0, Some(read_texture));
+                    // Set read texture to binding=0
+                    gl.active_texture(gl::TEXTURE0);
+                    gl.bind_texture(gl::TEXTURE_2D, Some(read_texture));
+                    // Set write texture to binding=1
+                    gl.bind_image_texture(1, read_texture, 0, false, 0, gl::READ_WRITE, gl::RG32F);
+                    // Set particle buffer to binding=2
+                    gl.bind_buffer_base(gl::SHADER_STORAGE_BUFFER, 2, Some(particle_buffer));
+                    // Dispatch
                     gl.dispatch_compute(N_PARTICLES as u32, 1, 1);
+                    // Memory barrier for vertex shader
+                    gl.memory_barrier(gl::SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
                     // Draw particles
                     gl.clear(gl::COLOR_BUFFER_BIT);
                     gl.use_program(Some(particle_shader));
-                    gl.bind_buffer_base(gl::SHADER_STORAGE_BUFFER, 0, Some(particle_buffer));
-                    gl.bind_texture(gl::TEXTURE0, Some(read_texture));
                     gl.draw_arrays(gl::POINTS, 0, N_PARTICLES);
+
                     window.swap_buffers().unwrap();
                 }
                 Event::WindowEvent { ref event, .. } => match event {
