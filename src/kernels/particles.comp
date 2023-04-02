@@ -1,0 +1,32 @@
+#version 450
+layout (local_size_x = 32) in;
+
+uniform layout(binding=0) sampler2D read_img;
+uniform layout(binding=1, rg32f) image2D write_img;
+layout(std430, binding=2) buffer Particles {
+    vec2 particles[];
+};
+uniform layout(location=0) float dt;
+
+float rand(vec2 co){
+    return fract(sin(dot(co, vec2(12.9898, 78.233))) * 43758.5453);
+}
+
+void main() {
+    uint idx = gl_GlobalInvocationID.x;
+    vec2 last_state = particles[idx];
+
+    bool do_reset = dt == 0.;
+    vec2 size = vec2(imageSize(write_img));
+    bool out_bounds = last_state.x < 0.
+        || last_state.y < 0 
+        || last_state.x > size.x 
+        || last_state.y > size.y;
+
+    if (do_reset || out_bounds) {
+        float rx = rand(vec2(2344., idx) / 1000);
+        float ry = rand(vec2(1244., idx) / 1000);
+
+        particles[idx] = vec2(rx, ry) * size;
+    }
+}
