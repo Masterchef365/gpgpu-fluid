@@ -8,7 +8,7 @@ const N_PARTICLES: i32 = 10_000;
 const LOCAL_SIZE: i32 = 32;
 const WIDTH: i32 = 6 * LOCAL_SIZE;
 const HEIGHT: i32 = 6 * LOCAL_SIZE;
-const N_ITERS: u32 = 15;
+const N_ITERS: u32 = 10;
 
 fn main() -> Result<()> {
     unsafe {
