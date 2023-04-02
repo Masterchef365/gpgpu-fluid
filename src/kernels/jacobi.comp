@@ -18,7 +18,7 @@ void main() {
     ivec2 right_pos = gid + ivec2(1, 0);
 
     float left = imageLoad(read_u, left_pos).x;
-    float right = imageLoad(read_u, bottom_pos).x;
+    float right = imageLoad(read_u, right_pos).x;
     float top = imageLoad(read_v, top_pos).x;
     float bottom = imageLoad(read_v, bottom_pos).x;
 
