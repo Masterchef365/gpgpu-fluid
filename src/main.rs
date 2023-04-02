@@ -75,6 +75,8 @@ fn main() -> Result<()> {
             gl::FLOAT,
             None,
         );
+        gl.texture_parameter_i32(read_texture, gl::TEXTURE_MIN_FILTER, gl::NEAREST as _);
+        gl.texture_parameter_i32(read_texture, gl::TEXTURE_MAG_FILTER, gl::NEAREST as _);
 
         let mut write_texture = gl.create_texture().map_err(|e| format_err!("{}", e))?;
         gl.bind_texture(gl::TEXTURE_2D, Some(write_texture));
@@ -89,6 +91,8 @@ fn main() -> Result<()> {
             gl::FLOAT,
             None,
         );
+        gl.texture_parameter_i32(write_texture, gl::TEXTURE_MIN_FILTER, gl::NEAREST as _);
+        gl.texture_parameter_i32(write_texture, gl::TEXTURE_MAG_FILTER, gl::NEAREST as _);
 
         // Set up GL state
         gl.clear_color(0., 0., 0., 1.0);
@@ -109,8 +113,6 @@ fn main() -> Result<()> {
                 Event::RedrawRequested(_) => {
                     // Execute jacobi kernel
                     gl.use_program(Some(jacobi_kernel));
-                    // Set particle buffer to binding=2
-                    gl.bind_buffer_base(gl::SHADER_STORAGE_BUFFER, 2, Some(particle_buffer));
                     let parity_loc = gl.get_uniform_location(jacobi_kernel, "parity");
                     for i in 0..N_ITERS {
                         let parity = i % 2;
@@ -127,12 +129,13 @@ fn main() -> Result<()> {
                         std::mem::swap(&mut read_texture, &mut write_texture);
                     }
 
+                    // Execute advection kernel
+                    gl.use_program(Some(advect_kernel));
                     // Set read texture to binding=0
                     gl.active_texture(gl::TEXTURE0);
                     gl.bind_texture(gl::TEXTURE_2D, Some(read_texture));
-
-                    // Execute advection kernel
-                    gl.use_program(Some(advect_kernel));
+                    // Set write texture to binding=1
+                    gl.bind_image_texture(1, write_texture, 0, false, 0, gl::READ_WRITE, gl::RG32F);
                     // Set dt
                     let dt_loc = gl.get_uniform_location(advect_kernel, "dt");
                     gl.uniform_1_f32(dt_loc.as_ref(), dt);
@@ -140,8 +143,17 @@ fn main() -> Result<()> {
                     // Memory barrier for vertex shader
                     gl.memory_barrier(gl::SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
+                    std::mem::swap(&mut read_texture, &mut write_texture);
+
                     // Execute particle kernel
                     gl.use_program(Some(particle_kernel));
+                    // Set particle buffer to binding=2
+                    gl.bind_buffer_base(gl::SHADER_STORAGE_BUFFER, 2, Some(particle_buffer));
+                    // Set read texture to binding=0
+                    gl.active_texture(gl::TEXTURE0);
+                    gl.bind_texture(gl::TEXTURE_2D, Some(read_texture));
+                    // Set write texture to binding=1
+                    gl.bind_image_texture(1, write_texture, 0, false, 0, gl::READ_WRITE, gl::RG32F);
                     // Set dt
                     let dt_loc = gl.get_uniform_location(particle_kernel, "dt");
                     gl.uniform_1_f32(dt_loc.as_ref(), dt);

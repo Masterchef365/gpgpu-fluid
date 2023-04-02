@@ -1,6 +1,7 @@
 #version 450
 layout (local_size_x = 32) in;
 
+uniform layout(binding=0) sampler2D read_img;
 uniform layout(binding=1, rg32f) image2D write_img;
 layout(std430, binding=2) buffer Particles {
     vec2 particles[];
@@ -9,6 +10,12 @@ uniform layout(location=0) float dt;
 
 float rand(vec2 co){
     return fract(sin(dot(co, vec2(12.9898, 78.233))) * 43758.5453);
+}
+
+vec2 advect(vec2 pt) {
+    float u = texture(read_img, pt + vec2(0, -0.5)).x;
+    float v = texture(read_img, pt + vec2(-0.5, 0)).y;
+    return pt - vec2(u, v) * dt;
 }
 
 void main() {
@@ -28,4 +35,5 @@ void main() {
 
         particles[idx] = vec2(rx, ry) * size;
     }
-}
+
+    particles[idx] -= advect(particles[idx]) * 0.1; }

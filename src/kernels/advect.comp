@@ -18,6 +18,7 @@ void main() {
         if (xy == ivec2(imageSize(write_img))/2) {
             imageStore(write_img, xy, vec4(100.));
         }
+        return;
     }
 
     // Advect velocity
