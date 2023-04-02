@@ -1,13 +1,15 @@
 #version 450
 layout (local_size_x = 32, local_size_y = 32) in;
 
-uniform layout(binding=0) sampler2D read_img;
-uniform layout(binding=1, rg32f) image2D write_img;
+uniform layout(binding=0) sampler2D read_u;
+uniform layout(binding=1) sampler2D read_v;
+uniform layout(binding=2, r32f) restrict image2D write_u;
+uniform layout(binding=3, r32f) restrict image2D write_v;
 uniform layout(location=0) float dt;
 
 void main() {
     ivec2 xy = ivec2(gl_GlobalInvocationID.xy);
-    vec2 tex_size = vec2(imageSize(write_img));
+    vec2 tex_size = vec2(imageSize(write_u));
 
     vec2 uv = xy / tex_size;
     uv = uv * 2. - 1.;
@@ -15,28 +17,28 @@ void main() {
     if (dt == 0.) {
         vec2 vel = float(length(uv) < 0.2) * vec2(0, -1);
         //vec2 vel = vec2(0);
-        imageStore(write_img, xy, vec4(vel, 0, 0));
+        imageStore(write_u, xy, vec4(vel.x, 0,0,0));
+        imageStore(write_v, xy, vec4(vel.y, 0,0,0));
         return;
     }
 
     // Advect u
     float u, v;
     vec2 k;
-    u = texture(read_img, (xy + vec2(0.5))/tex_size).x;
-    v = texture(read_img, (xy + vec2(1,0))/tex_size).y;
+    u = texture(read_u, (xy + vec2(0.5))/tex_size).x;
+    v = texture(read_v, (xy + vec2(1,0))/tex_size).x;
     k = vec2(xy) - vec2(u, v) * dt;
-    float next_u = texture(read_img, (k + vec2(0.5))/tex_size).x;
+    float next_u = texture(read_u, (k + vec2(0.5))/tex_size).x;
 
     // Advect v
-    u = texture(read_img, (xy + vec2(0,1))/tex_size).x;
-    v = texture(read_img, (xy + vec2(0.5))/tex_size).y;
+    u = texture(read_u, (xy + vec2(0,1))/tex_size).x;
+    v = texture(read_v, (xy + vec2(0.5))/tex_size).x;
     k = vec2(xy) - vec2(u, v) * dt;
-    float next_v = texture(read_img, (k + vec2(0.5))/tex_size).y;
+    float next_v = texture(read_v, (k + vec2(0.5))/tex_size).x;
 
-    vec2 vel = vec2(next_u, next_v);
     //vel += float(length(uv) < 0.1) * vec2(0.1, 0);
 
     // Write semi-lagrangian calc
-    imageStore(write_img, xy, vec4(vel, 0, 0));
-    //imageStore(write_img, xy, texture(read_img, uv));
+    imageStore(write_u, xy, vec4(next_u, 0,0,0));
+    imageStore(write_v, xy, vec4(next_v, 0,0,0));
 }

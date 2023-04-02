@@ -1,62 +1,61 @@
 #version 450
 layout (local_size_x = 32, local_size_y = 32) in;
 
-uniform layout(binding=0, rg32f) restrict image2D read_img;
-uniform layout(binding=1, rg32f) restrict image2D write_img;
+uniform layout(binding=0, rg32f) restrict image2D read_u;
+uniform layout(binding=1, rg32f) restrict image2D read_v;
+uniform layout(binding=2, rg32f) restrict image2D write_u;
+uniform layout(binding=3, rg32f) restrict image2D write_v;
 uniform layout(location=0) uint parity;
 
 void main() {
-    ivec2 xy = ivec2(gl_GlobalInvocationID.xy);
-    ivec2 size = imageSize(read_img);
+    ivec2 gid = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 size = imageSize(read_u);
 
     // Read previous state
-    ivec2 tl_pos = xy;
-    ivec2 right_pos = xy + ivec2(1, 0);
-    ivec2 bottom_pos = xy + ivec2(0, 1);
+    ivec2 top_pos = gid;
+    ivec2 bottom_pos = gid + ivec2(0, 1);
+    ivec2 left_pos = gid;
+    ivec2 right_pos = gid + ivec2(1, 0);
 
-    vec2 tl = imageLoad(read_img, xy).xy;
-    vec2 right = imageLoad(read_img, right_pos).xy;
-    vec2 bottom = imageLoad(read_img, bottom_pos).xy;
+    float top = imageLoad(read_u, top_pos).x;
+    float bottom = imageLoad(read_u, bottom_pos).x;
+    float left = imageLoad(read_u, left_pos).x;
+    float right = imageLoad(read_u, bottom_pos).x;
 
-    vec2 tl_before = imageLoad(write_img, xy).xy;
-    vec2 right_before = imageLoad(write_img, right_pos).xy;
-    vec2 bottom_before = imageLoad(write_img, bottom_pos).xy;
-
-    if (xy.x == 0) {
-        imageStore(write_img, tl_pos, -imageLoad(write_img, tl_pos + ivec2(1, 0)));
+    /*
+    if (gid.x == 0) {
+        imageStore(write_img, gid, -imageLoad(write_img, gid + ivec2(1, 0)));
         return;
     }
 
-    if (xy.x + 1 == size.x) {
-        imageStore(write_img, tl_pos, -imageLoad(write_img, tl_pos - ivec2(1, 0)));
+    if (gid.x + 1 == size.x) {
+        imageStore(write_img, gid, -imageLoad(write_img, gid - ivec2(1, 0)));
         return;
     }
 
-    if (xy.y == 0) {
-        imageStore(write_img, tl_pos, -imageLoad(write_img, tl_pos + ivec2(0, 1)));
+    if (gid.y == 0) {
+        imageStore(write_img, gid, -imageLoad(write_img, gid + ivec2(0, 1)));
         return;
     }
 
-    if (xy.y + 1 == size.y) {
-        imageStore(write_img, tl_pos, -imageLoad(write_img, tl_pos - ivec2(0, 1)));
+    if (gid.y + 1 == size.y) {
+        imageStore(write_img, gid, -imageLoad(write_img, gid - ivec2(0, 1)));
         return;
     }
-
-
+    */
 
     // Enforce checkerboard pattern
-    if (((xy.x % 2) ^ (xy.y % 2)) == parity) {
-        imageStore(write_img, tl_pos, vec4(tl_before, 0, 0));
-    } else {
+    if (((gid.x % 2) ^ (gid.y % 2)) == parity) {
         // Calculate divergence
-        float dx = right.x - tl.x;
-        float dy = bottom.y - tl.y;
+        float dx = right - left;
+        float dy = bottom - top;
 
         float dF = (dx + dy) / 4;
 
         // Write next state
-        imageStore(write_img, tl_pos, vec4(tl + vec2(dF, dF), 0, 0));
-        imageStore(write_img, right_pos, vec4(right.x - dF, right_before.y, 0, 0));
-        imageStore(write_img, bottom_pos, vec4(bottom_before.x, bottom.y - dF, 0, 0));
+        imageStore(write_u, left_pos, vec4(left + dF, 0,0,0));
+        imageStore(write_u, right_pos, vec4(right - dF, 0,0,0));
+        imageStore(write_v, top_pos, vec4(top + dF, 0,0,0));
+        imageStore(write_v, bottom_pos, vec4(bottom - dF, 0,0,0));
     }
 }
