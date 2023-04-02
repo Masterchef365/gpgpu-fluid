@@ -13,8 +13,8 @@ float rand(vec2 co){
 }
 
 vec2 advect(vec2 pt) {
-    float u = texture(read_img, pt + vec2(0, -0.5)).x;
-    float v = texture(read_img, pt + vec2(-0.5, 0)).y;
+    float u = texture(read_img, (pt + vec2(0, -0.5)) / imageSize(write_img)).x;
+    float v = texture(read_img, (pt + vec2(-0.5, 0)) / imageSize(write_img)).y;
     return pt - vec2(u, v) * dt;
 }
 
