@@ -92,6 +92,7 @@ fn main() -> Result<()> {
                     // Draw particles
                     gl.clear(gl::COLOR_BUFFER_BIT);
                     gl.use_program(Some(particle_shader));
+                    gl.bind_vertex_array(Some(particle_vertex_array));
                     gl.draw_arrays(gl::POINTS, 0, N_PARTICLES);
 
                     window.swap_buffers().unwrap();
