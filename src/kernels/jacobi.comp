@@ -22,12 +22,27 @@ void main() {
     vec2 right_before = imageLoad(write_img, right_pos).xy;
     vec2 bottom_before = imageLoad(write_img, bottom_pos).xy;
 
-    /*
     if (xy.x == 0) {
-        imageStore(write_img, tl_pos, imageLoad(read_img, tl_pos + ivec2(1, 0)));
+        imageStore(write_img, tl_pos, -imageLoad(write_img, tl_pos + ivec2(1, 0)));
         return;
     }
-    */
+
+    if (xy.x + 1 == size.x) {
+        imageStore(write_img, tl_pos, -imageLoad(write_img, tl_pos - ivec2(1, 0)));
+        return;
+    }
+
+    if (xy.y == 0) {
+        imageStore(write_img, tl_pos, -imageLoad(write_img, tl_pos + ivec2(0, 1)));
+        return;
+    }
+
+    if (xy.y + 1 == size.y) {
+        imageStore(write_img, tl_pos, -imageLoad(write_img, tl_pos - ivec2(0, 1)));
+        return;
+    }
+
+
 
     // Enforce checkerboard pattern
     if (((xy.x % 2) ^ (xy.y % 2)) == parity) {

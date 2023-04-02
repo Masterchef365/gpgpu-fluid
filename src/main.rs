@@ -4,10 +4,10 @@ use gl::HasContext;
 use glutin::event::{Event, WindowEvent};
 use glutin::event_loop::ControlFlow;
 
-const N_PARTICLES: i32 = 1_130_000;
+const N_PARTICLES: i32 = 1_400_000;
 const LOCAL_SIZE: i32 = 32;
-const WIDTH: i32 = 16 * LOCAL_SIZE;
-const HEIGHT: i32 = 16 * LOCAL_SIZE;
+const WIDTH: i32 = 6 * LOCAL_SIZE;
+const HEIGHT: i32 = 6 * LOCAL_SIZE;
 const N_ITERS: u32 = 20;
 
 fn main() -> Result<()> {
