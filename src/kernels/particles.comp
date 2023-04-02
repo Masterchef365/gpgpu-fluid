@@ -3,7 +3,7 @@ layout (local_size_x = 32) in;
 
 uniform layout(binding=0) sampler2D read_u;
 uniform layout(binding=1) sampler2D read_v;
-uniform layout(binding=2, rg32f) image2D write_img;
+uniform layout(binding=2, r32f) image2D write_img;
 layout(std430, binding=4) buffer Particles {
     vec2 particles[];
 };

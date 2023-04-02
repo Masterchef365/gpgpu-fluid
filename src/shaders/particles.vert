@@ -1,6 +1,6 @@
 #version 450
 
-uniform layout(binding=1, rg32f) image2D write_img;
+uniform layout(binding=1, r32f) image2D write_img;
 layout(std430, binding=4) buffer Particles {
     vec2 particles[];
 };

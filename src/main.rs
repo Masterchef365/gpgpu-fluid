@@ -4,7 +4,7 @@ use gl::HasContext;
 use glutin::event::{Event, WindowEvent};
 use glutin::event_loop::ControlFlow;
 
-const N_PARTICLES: i32 = 1_400_000;
+const N_PARTICLES: i32 = 400_000;
 const LOCAL_SIZE: i32 = 32;
 const WIDTH: i32 = 6 * LOCAL_SIZE;
 const HEIGHT: i32 = 6 * LOCAL_SIZE;
@@ -154,8 +154,6 @@ fn main() -> Result<()> {
 
                     // Execute particle kernel
                     gl.use_program(Some(particle_kernel));
-                    // Set particle buffer to binding=2
-                    gl.bind_buffer_base(gl::SHADER_STORAGE_BUFFER, 4, Some(particle_buffer));
                     // Set read textures
                     gl.active_texture(gl::TEXTURE0);
                     gl.bind_texture(gl::TEXTURE_2D, Some(read_u));
@@ -164,7 +162,8 @@ fn main() -> Result<()> {
                     // Set write textures 
                     gl.bind_image_texture(2, write_u, 0, false, 0, gl::READ_WRITE, gl::R32F);
                     gl.bind_image_texture(3, write_v, 0, false, 0, gl::READ_WRITE, gl::R32F);
-
+                    // Set particle buffer
+                    gl.bind_buffer_base(gl::SHADER_STORAGE_BUFFER, 4, Some(particle_buffer));
                     // Set dt
                     let dt_loc = gl.get_uniform_location(particle_kernel, "dt");
                     gl.uniform_1_f32(dt_loc.as_ref(), dt);

@@ -1,10 +1,10 @@
 #version 450
 layout (local_size_x = 32, local_size_y = 32) in;
 
-uniform layout(binding=0, rg32f) restrict image2D read_u;
-uniform layout(binding=1, rg32f) restrict image2D read_v;
-uniform layout(binding=2, rg32f) restrict image2D write_u;
-uniform layout(binding=3, rg32f) restrict image2D write_v;
+uniform layout(binding=0, r32f) restrict image2D read_u;
+uniform layout(binding=1, r32f) restrict image2D read_v;
+uniform layout(binding=2, r32f) restrict image2D write_u;
+uniform layout(binding=3, r32f) restrict image2D write_v;
 uniform layout(location=0) uint parity;
 
 void main() {
@@ -17,10 +17,10 @@ void main() {
     ivec2 left_pos = gid;
     ivec2 right_pos = gid + ivec2(1, 0);
 
-    float top = imageLoad(read_u, top_pos).x;
-    float bottom = imageLoad(read_u, bottom_pos).x;
     float left = imageLoad(read_u, left_pos).x;
     float right = imageLoad(read_u, bottom_pos).x;
+    float top = imageLoad(read_v, top_pos).x;
+    float bottom = imageLoad(read_v, bottom_pos).x;
 
     /*
     if (gid.x == 0) {
