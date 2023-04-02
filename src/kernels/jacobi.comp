@@ -18,6 +18,7 @@ void main() {
     vec2 right = imageLoad(read_img, right_pos).xy;
     vec2 bottom = imageLoad(read_img, bottom_pos).xy;
 
+    vec2 tl_before = imageLoad(write_img, xy).xy;
     vec2 right_before = imageLoad(write_img, right_pos).xy;
     vec2 bottom_before = imageLoad(write_img, bottom_pos).xy;
 
@@ -30,7 +31,7 @@ void main() {
 
     // Enforce checkerboard pattern
     if (((xy.x % 2) ^ (xy.y % 2)) == parity) {
-        imageStore(write_img, tl_pos, vec4(tl, 0, 0));
+        imageStore(write_img, tl_pos, vec4(tl_before, 0, 0));
     } else {
         // Calculate divergence
         float dx = right.x - tl.x;

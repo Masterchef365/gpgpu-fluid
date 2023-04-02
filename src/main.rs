@@ -4,11 +4,11 @@ use gl::HasContext;
 use glutin::event::{Event, WindowEvent};
 use glutin::event_loop::ControlFlow;
 
-const N_PARTICLES: i32 = 10_000;
+const N_PARTICLES: i32 = 1_130_000;
 const LOCAL_SIZE: i32 = 32;
 const WIDTH: i32 = 16 * LOCAL_SIZE;
 const HEIGHT: i32 = 16 * LOCAL_SIZE;
-const N_ITERS: u32 = 35;
+const N_ITERS: u32 = 20;
 
 fn main() -> Result<()> {
     unsafe {
@@ -81,6 +81,7 @@ fn main() -> Result<()> {
         gl.texture_parameter_i32(read_texture, gl::TEXTURE_MAG_FILTER, gl::LINEAR as _);
         gl.texture_parameter_i32(read_texture, gl::TEXTURE_WRAP_S, gl::CLAMP_TO_BORDER as _);
         gl.texture_parameter_i32(read_texture, gl::TEXTURE_WRAP_T, gl::CLAMP_TO_BORDER as _);
+        gl.tex_parameter_f32_slice(gl::TEXTURE_2D, gl::TEXTURE_BORDER_COLOR, &[0.0; 4]);
 
         let mut write_texture = gl.create_texture().map_err(|e| format_err!("{}", e))?;
         gl.bind_texture(gl::TEXTURE_2D, Some(write_texture));
@@ -99,11 +100,11 @@ fn main() -> Result<()> {
         gl.texture_parameter_i32(write_texture, gl::TEXTURE_MAG_FILTER, gl::LINEAR as _);
         gl.texture_parameter_i32(write_texture, gl::TEXTURE_WRAP_S, gl::CLAMP_TO_BORDER as _);
         gl.texture_parameter_i32(write_texture, gl::TEXTURE_WRAP_T, gl::CLAMP_TO_BORDER as _);
-
+        gl.tex_parameter_f32_slice(gl::TEXTURE_2D, gl::TEXTURE_BORDER_COLOR, &[0.0; 4]);
 
         // Set up GL state
         gl.clear_color(0., 0., 0., 1.0);
-        gl.enable(gl::VERTEX_PROGRAM_POINT_SIZE);
+        //gl.enable(gl::VERTEX_PROGRAM_POINT_SIZE);
 
         let mut dt = 0.;
 
@@ -121,8 +122,9 @@ fn main() -> Result<()> {
                     // Execute jacobi kernel
                     gl.use_program(Some(jacobi_kernel));
                     let parity_loc = gl.get_uniform_location(jacobi_kernel, "parity");
-                    for _ in 0..N_ITERS * 2 {
-                        for parity in [0, 1] {
+                    for i in 0..N_ITERS * 2 {
+                        let parity = i % 2;
+                        //for parity in [0, 1] {
                             gl.uniform_1_u32(parity_loc.as_ref(), parity);
                             // Set read texture to binding=0
                             gl.bind_image_texture(0, read_texture, 0, false, 0, gl::READ_WRITE, gl::RG32F);
@@ -134,7 +136,7 @@ fn main() -> Result<()> {
                             gl.memory_barrier(gl::SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
                             std::mem::swap(&mut read_texture, &mut write_texture);
-                        }
+                        //}
                     }
 
                     // Execute advection kernel

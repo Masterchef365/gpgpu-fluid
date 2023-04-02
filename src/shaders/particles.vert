@@ -12,5 +12,5 @@ void main() {
     vert = vert * 2. - 1.;
 
     gl_Position = vec4(vert, 0.0, 1.0);
-    gl_PointSize = 3.;
+    //gl_PointSize = 1.;
 }
