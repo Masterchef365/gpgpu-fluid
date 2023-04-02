@@ -53,54 +53,44 @@ fn main() -> Result<()> {
         let particle_kernel = create_program(
             &gl,
             &[(gl::COMPUTE_SHADER, include_str!("kernels/particles.comp"))],
-        )?;
+        ).unwrap();
         let jacobi_kernel = create_program(
             &gl,
             &[(gl::COMPUTE_SHADER, include_str!("kernels/jacobi.comp"))],
-        )?;
+        ).unwrap();
         let advect_kernel = create_program(
             &gl,
             &[(gl::COMPUTE_SHADER, include_str!("kernels/advect.comp"))],
-        )?;
+        ).unwrap();
 
         // Set up textures
-        let mut read_texture = gl.create_texture().map_err(|e| format_err!("{}", e))?;
-        gl.bind_texture(gl::TEXTURE_2D, Some(read_texture));
-        gl.tex_image_2d(
-            gl::TEXTURE_2D,
-            0,
-            gl::RG32F as _,
-            WIDTH,
-            HEIGHT,
-            0,
-            gl::RG,
-            gl::FLOAT,
-            None,
-        );
-        gl.texture_parameter_i32(read_texture, gl::TEXTURE_MIN_FILTER, gl::LINEAR as _);
-        gl.texture_parameter_i32(read_texture, gl::TEXTURE_MAG_FILTER, gl::LINEAR as _);
-        gl.texture_parameter_i32(read_texture, gl::TEXTURE_WRAP_S, gl::CLAMP_TO_BORDER as _);
-        gl.texture_parameter_i32(read_texture, gl::TEXTURE_WRAP_T, gl::CLAMP_TO_BORDER as _);
-        gl.tex_parameter_f32_slice(gl::TEXTURE_2D, gl::TEXTURE_BORDER_COLOR, &[0.0; 4]);
+        let texture = || -> Result<gl::NativeTexture> {
+            let tex = gl.create_texture().map_err(|e| format_err!("{}", e))?;
+            gl.bind_texture(gl::TEXTURE_2D, Some(tex));
+            gl.tex_image_2d(
+                gl::TEXTURE_2D,
+                0,
+                gl::R32F as _,
+                WIDTH,
+                HEIGHT,
+                0,
+                gl::RED,
+                gl::FLOAT,
+                None,
+            );
+            gl.texture_parameter_i32(tex, gl::TEXTURE_MIN_FILTER, gl::LINEAR as _);
+            gl.texture_parameter_i32(tex, gl::TEXTURE_MAG_FILTER, gl::LINEAR as _);
+            gl.texture_parameter_i32(tex, gl::TEXTURE_WRAP_S, gl::CLAMP_TO_BORDER as _);
+            gl.texture_parameter_i32(tex, gl::TEXTURE_WRAP_T, gl::CLAMP_TO_BORDER as _);
+            gl.tex_parameter_f32_slice(gl::TEXTURE_2D, gl::TEXTURE_BORDER_COLOR, &[0.0; 4]);
+            Ok(tex)
+        };
 
-        let mut write_texture = gl.create_texture().map_err(|e| format_err!("{}", e))?;
-        gl.bind_texture(gl::TEXTURE_2D, Some(write_texture));
-        gl.tex_image_2d(
-            gl::TEXTURE_2D,
-            0,
-            gl::RG32F as _,
-            WIDTH,
-            HEIGHT,
-            0,
-            gl::RG,
-            gl::FLOAT,
-            None,
-        );
-        gl.texture_parameter_i32(write_texture, gl::TEXTURE_MIN_FILTER, gl::LINEAR as _);
-        gl.texture_parameter_i32(write_texture, gl::TEXTURE_MAG_FILTER, gl::LINEAR as _);
-        gl.texture_parameter_i32(write_texture, gl::TEXTURE_WRAP_S, gl::CLAMP_TO_BORDER as _);
-        gl.texture_parameter_i32(write_texture, gl::TEXTURE_WRAP_T, gl::CLAMP_TO_BORDER as _);
-        gl.tex_parameter_f32_slice(gl::TEXTURE_2D, gl::TEXTURE_BORDER_COLOR, &[0.0; 4]);
+        let mut read_u = texture()?;
+        let mut write_u = texture()?;
+
+        let mut read_v = texture()?;
+        let mut write_v = texture()?;
 
         // Set up GL state
         gl.clear_color(0., 0., 0., 1.0);
@@ -124,28 +114,34 @@ fn main() -> Result<()> {
                     let parity_loc = gl.get_uniform_location(jacobi_kernel, "parity");
                     for i in 0..N_ITERS * 2 {
                         let parity = i % 2;
-                        //for parity in [0, 1] {
-                            gl.uniform_1_u32(parity_loc.as_ref(), parity);
-                            // Set read texture to binding=0
-                            gl.bind_image_texture(0, read_texture, 0, false, 0, gl::READ_WRITE, gl::RG32F);
-                            // Set write texture to binding=1
-                            gl.bind_image_texture(1, write_texture, 0, false, 0, gl::READ_WRITE, gl::RG32F);
-                            // Run kernel
-                            gl.dispatch_compute((WIDTH / LOCAL_SIZE) as _, (HEIGHT / LOCAL_SIZE) as _, 1);
-                            // Memory barrier for vertex shader
-                            gl.memory_barrier(gl::SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
-                            std::mem::swap(&mut read_texture, &mut write_texture);
-                        //}
+                        gl.uniform_1_u32(parity_loc.as_ref(), parity);
+                        // Set read textures
+                        gl.bind_image_texture(0, read_u, 0, false, 0, gl::READ_WRITE, gl::R32F);
+                        gl.bind_image_texture(1, read_v, 0, false, 0, gl::READ_WRITE, gl::R32F);
+                        // Set write textures
+                        gl.bind_image_texture(2, write_u, 0, false, 0, gl::READ_WRITE, gl::R32F);
+                        gl.bind_image_texture(3, write_v, 0, false, 0, gl::READ_WRITE, gl::R32F);
+
+                        // Run kernel
+                        gl.dispatch_compute((WIDTH / LOCAL_SIZE) as _, (HEIGHT / LOCAL_SIZE) as _, 1);
+                        // Memory barrier for vertex shader
+                        gl.memory_barrier(gl::SHADER_IMAGE_ACCESS_BARRIER_BIT);
+
+                        std::mem::swap(&mut read_u, &mut write_u);
+                        std::mem::swap(&mut read_v, &mut write_v);
                     }
 
                     // Execute advection kernel
                     gl.use_program(Some(advect_kernel));
-                    // Set read texture to binding=0
+                    // Set read textures
                     gl.active_texture(gl::TEXTURE0);
-                    gl.bind_texture(gl::TEXTURE_2D, Some(read_texture));
-                    // Set write texture to binding=1
-                    gl.bind_image_texture(1, write_texture, 0, false, 0, gl::READ_WRITE, gl::RG32F);
+                    gl.bind_texture(gl::TEXTURE_2D, Some(read_u));
+                    gl.active_texture(gl::TEXTURE1);
+                    gl.bind_texture(gl::TEXTURE_2D, Some(read_v));
+                    // Set write textures 
+                    gl.bind_image_texture(2, write_u, 0, false, 0, gl::READ_WRITE, gl::R32F);
+                    gl.bind_image_texture(3, write_v, 0, false, 0, gl::READ_WRITE, gl::R32F);
                     // Set dt
                     let dt_loc = gl.get_uniform_location(advect_kernel, "dt");
                     gl.uniform_1_f32(dt_loc.as_ref(), dt);
@@ -153,17 +149,22 @@ fn main() -> Result<()> {
                     // Memory barrier for vertex shader
                     gl.memory_barrier(gl::SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
-                    std::mem::swap(&mut read_texture, &mut write_texture);
+                    std::mem::swap(&mut read_u, &mut write_u);
+                    std::mem::swap(&mut read_v, &mut write_v);
 
                     // Execute particle kernel
                     gl.use_program(Some(particle_kernel));
                     // Set particle buffer to binding=2
-                    gl.bind_buffer_base(gl::SHADER_STORAGE_BUFFER, 2, Some(particle_buffer));
-                    // Set read texture to binding=0
+                    gl.bind_buffer_base(gl::SHADER_STORAGE_BUFFER, 4, Some(particle_buffer));
+                    // Set read textures
                     gl.active_texture(gl::TEXTURE0);
-                    gl.bind_texture(gl::TEXTURE_2D, Some(read_texture));
-                    // Set write texture to binding=1
-                    gl.bind_image_texture(1, write_texture, 0, false, 0, gl::READ_WRITE, gl::RG32F);
+                    gl.bind_texture(gl::TEXTURE_2D, Some(read_u));
+                    gl.active_texture(gl::TEXTURE1);
+                    gl.bind_texture(gl::TEXTURE_2D, Some(read_v));
+                    // Set write textures 
+                    gl.bind_image_texture(2, write_u, 0, false, 0, gl::READ_WRITE, gl::R32F);
+                    gl.bind_image_texture(3, write_v, 0, false, 0, gl::READ_WRITE, gl::R32F);
+
                     // Set dt
                     let dt_loc = gl.get_uniform_location(particle_kernel, "dt");
                     gl.uniform_1_f32(dt_loc.as_ref(), dt);
