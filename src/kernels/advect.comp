@@ -14,7 +14,7 @@ vec2 advect(vec2 pt) {
 void main() {
     ivec2 xy = ivec2(gl_GlobalInvocationID.xy);
 
-    if (true) {
+    if (dt == 0.) {
         vec2 size = vec2(imageSize(write_img));
         vec2 uv = vec2(xy) / size;
         uv = uv * 2. - 1.;
@@ -28,8 +28,8 @@ void main() {
     vec2 adv_y = advect(xy + vec2(0.5, 0));
 
     // Sample flowmap
-    float x_vel = texture(read_img, adv_x + vec2(0, -0.5)).x;
-    float y_vel = texture(read_img, adv_y + vec2(-0.5, 0)).y;
+    float x_vel = texture(read_img, (adv_x + vec2(0, -0.5)) / imageSize(write_img)).x;
+    float y_vel = texture(read_img, (adv_y + vec2(-0.5, 0)) / imageSize(write_img)).y;
 
     // Write semi-lagrangian calc
     imageStore(write_img, xy, vec4(vec2(x_vel, y_vel), 0, 0));
