@@ -1,8 +1,8 @@
 #version 450
 layout (local_size_x = 32, local_size_y = 32) in;
 
-uniform layout(binding=0, rg32f) restrict image2D read_img;
-uniform layout(binding=1, rg32f) restrict image2D write_img;
+uniform layout(binding=0, rg32f) restrict readonly image2D read_img;
+uniform layout(binding=1, rg32f) restrict writeonly image2D write_img;
 uniform layout(location=0) uint parity;
 
 void main() {
@@ -17,11 +17,6 @@ void main() {
     vec2 tl = imageLoad(read_img, xy).xy;
     vec2 right = imageLoad(read_img, right_pos).xy;
     vec2 bottom = imageLoad(read_img, bottom_pos).xy;
-
-    if (xy.x == 0) {
-        imageStore(write_img, xy, -imageLoad(read_img, xy + ivec2(-1, 0)));
-        return;
-    }
 
     // Enforce checkerboard pattern
     if (((xy.x % 2) ^ (xy.y % 2)) == parity) {

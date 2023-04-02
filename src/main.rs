@@ -8,7 +8,7 @@ const N_PARTICLES: i32 = 10_000;
 const LOCAL_SIZE: i32 = 32;
 const WIDTH: i32 = 16 * LOCAL_SIZE;
 const HEIGHT: i32 = 16 * LOCAL_SIZE;
-const N_ITERS: u32 = 15 * 2;
+const N_ITERS: u32 = 15;
 
 fn main() -> Result<()> {
     unsafe {
@@ -95,8 +95,6 @@ fn main() -> Result<()> {
         );
         gl.texture_parameter_i32(write_texture, gl::TEXTURE_MIN_FILTER, gl::LINEAR as _);
         gl.texture_parameter_i32(write_texture, gl::TEXTURE_MAG_FILTER, gl::LINEAR as _);
-        gl.texture_parameter_i32(write_texture, gl::TEXTURE_MIN_FILTER, gl::LINEAR as _);
-        gl.texture_parameter_i32(write_texture, gl::TEXTURE_MAG_FILTER, gl::LINEAR as _);
         gl.texture_parameter_i32(write_texture, gl::TEXTURE_WRAP_S, gl::CLAMP_TO_BORDER as _);
         gl.texture_parameter_i32(write_texture, gl::TEXTURE_WRAP_T, gl::CLAMP_TO_BORDER as _);
 
@@ -121,7 +119,7 @@ fn main() -> Result<()> {
                     // Execute jacobi kernel
                     gl.use_program(Some(jacobi_kernel));
                     let parity_loc = gl.get_uniform_location(jacobi_kernel, "parity");
-                    for i in 0..N_ITERS {
+                    for i in 0..N_ITERS * 2 {
                         let parity = i % 2;
                         gl.uniform_1_u32(parity_loc.as_ref(), parity);
                         // Set read texture to binding=0

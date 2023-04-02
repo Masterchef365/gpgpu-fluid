@@ -12,12 +12,6 @@ float rand(vec2 co){
     return fract(sin(dot(co, vec2(12.9898, 78.233))) * 43758.5453);
 }
 
-vec2 advect(vec2 pt) {
-    float u = texture(read_img, (pt + vec2(0, -0.5)) / imageSize(write_img)).x;
-    float v = texture(read_img, (pt + vec2(-0.5, 0)) / imageSize(write_img)).y;
-    return pt - vec2(u, v) * dt;
-}
-
 void main() {
     uint idx = gl_GlobalInvocationID.x;
     vec2 last_state = particles[idx];
@@ -36,5 +30,8 @@ void main() {
         particles[idx] = vec2(rx, ry) * size;
     }
 
-    particles[idx] = advect(particles[idx]); 
+    vec2 uv = particles[idx] / imageSize(write_img);
+    vec2 vel = texture(read_img, uv).xy;
+
+    particles[idx] += vel * dt;
 }

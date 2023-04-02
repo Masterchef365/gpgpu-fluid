@@ -9,5 +9,5 @@ void main() {
     vec2 vert = particles[gl_VertexID] / vec2(imageSize(write_img));
     vert = vert * 2. - 1.;
     gl_Position = vec4(vert, 0.0, 1.0);
-    gl_PointSize = 5.;
+    gl_PointSize = 3.;
 }
