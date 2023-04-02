@@ -6,9 +6,9 @@ use glutin::event_loop::ControlFlow;
 
 const N_PARTICLES: i32 = 10_000;
 const LOCAL_SIZE: i32 = 32;
-const WIDTH: i32 = 6 * LOCAL_SIZE;
-const HEIGHT: i32 = 6 * LOCAL_SIZE;
-const N_ITERS: u32 = 10;
+const WIDTH: i32 = 16 * LOCAL_SIZE;
+const HEIGHT: i32 = 16 * LOCAL_SIZE;
+const N_ITERS: u32 = 15;
 
 fn main() -> Result<()> {
     unsafe {
@@ -185,7 +185,6 @@ fn main() -> Result<()> {
                 }
                 Event::WindowEvent { ref event, .. } => match event {
                     WindowEvent::Resized(physical_size) => {
-                        dbg!(physical_size);
                         window.resize(*physical_size);
                         screen_size = (physical_size.width as f32, physical_size.height as f32);
                         gl.scissor(0, 0, physical_size.width as i32, physical_size.height as i32);

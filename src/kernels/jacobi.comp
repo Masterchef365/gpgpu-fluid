@@ -18,6 +18,12 @@ void main() {
     vec2 right = imageLoad(read_img, right_pos).xy;
     vec2 bottom = imageLoad(read_img, bottom_pos).xy;
 
+    if (true) {
+    //if (xy.x == 2) {
+        imageStore(write_img, tl_pos, imageLoad(read_img, tl_pos));
+        return;
+    }
+
     // Enforce checkerboard pattern
     if (((xy.x % 2) ^ (xy.y % 2)) == parity) {
         imageStore(write_img, tl_pos, vec4(tl, 0, 0));
