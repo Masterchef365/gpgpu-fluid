@@ -5,9 +5,14 @@ uniform layout(binding=0) sampler2D read_img;
 uniform layout(binding=1, rg32f) image2D write_img;
 uniform layout(location=0) float dt;
 
+vec2 adjusted_tex(vec2 pt) {
+    vec2 uv = (pt + vec2(0.5)) / imageSize(write_img);
+    return texture(read_img, uv).xy;
+}
+
 vec2 advect(vec2 pt) {
-    float u = texture(read_img, (pt + vec2(0, -0.5)) / imageSize(write_img)).x;
-    float v = texture(read_img, (pt + vec2(-0.5, 0)) / imageSize(write_img)).y;
+    float u = adjusted_tex(pt + vec2(0, -0.5)).x;
+    float v = adjusted_tex(pt + vec2(-0.5, 0)).y;
     return pt - vec2(u, v) * dt;
 }
 
@@ -28,8 +33,8 @@ void main() {
     vec2 adv_y = advect(xy + vec2(0.5, 0));
 
     // Sample flowmap
-    float x_vel = texture(read_img, (adv_x + vec2(0, -0.5)) / imageSize(write_img)).x;
-    float y_vel = texture(read_img, (adv_y + vec2(-0.5, 0)) / imageSize(write_img)).y;
+    float x_vel = adjusted_tex(adv_x + vec2(0, -0.5)).x;
+    float y_vel = adjusted_tex(adv_y + vec2(-0.5, 0)).y;
 
     // Write semi-lagrangian calc
     imageStore(write_img, xy, vec4(vec2(x_vel, y_vel), 0, 0));
