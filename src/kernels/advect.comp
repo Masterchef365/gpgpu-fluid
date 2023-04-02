@@ -7,7 +7,7 @@ uniform layout(location=0) float dt;
 
 vec2 adjusted_tex(vec2 pt) {
     vec2 size = imageSize(write_img);
-    vec2 uv = (pt + vec2(1)) / size;
+    vec2 uv = (pt + vec2(0.5)) / size;
     return texture(read_img, uv).xy;
 }
 
