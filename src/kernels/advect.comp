@@ -2,7 +2,7 @@
 layout (local_size_x = 32, local_size_y = 32) in;
 
 uniform layout(binding=0) sampler2D read_img;
-uniform layout(binding=1, rg32f) restrict image2D write_img;
+uniform layout(binding=1, rg32f) image2D write_img;
 uniform layout(location=0) float dt;
 
 vec2 advect( vec2 pt) {

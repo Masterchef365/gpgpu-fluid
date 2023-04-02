@@ -1,13 +1,12 @@
 #version 450
-const vec2 verts[3] = vec2[3](
-    vec2(0.5f, 1.0f),
-    vec2(0.0f, 0.0f),
-    vec2(1.0f, 0.0f)
-);
-
-out vec2 vert;
+uniform layout(binding=1, rg32f) image2D write_img;
+layout(std430, binding=0) buffer Particles {
+    vec2 particles[];
+};
 
 void main() {
-    vert = verts[gl_VertexID];
-    gl_Position = vec4(vert - 0.5, 0.0, 1.0);
+    vec2 vert = particles[gl_VertexID] / vec2(imageSize(write_img));
+    vert = vert * 2. - 1.;
+    gl_Position = vec4(vert, 0.0, 1.0);
+    gl_PointSize = 5.;
 }
