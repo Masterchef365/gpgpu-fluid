@@ -7,6 +7,7 @@ uniform layout(location=0) uint parity;
 
 void main() {
     ivec2 xy = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 size = imageSize(read_img);
 
     // Read previous state
     ivec2 tl_pos = xy;
@@ -16,6 +17,11 @@ void main() {
     vec2 tl = imageLoad(read_img, xy).xy;
     vec2 right = imageLoad(read_img, right_pos).xy;
     vec2 bottom = imageLoad(read_img, bottom_pos).xy;
+
+    if (xy.x == 0) {
+        imageStore(write_img, xy, -imageLoad(read_img, xy + ivec2(-1, 0)));
+        return;
+    }
 
     // Enforce checkerboard pattern
     if (((xy.x % 2) ^ (xy.y % 2)) == parity) {

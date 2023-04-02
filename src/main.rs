@@ -75,8 +75,10 @@ fn main() -> Result<()> {
             gl::FLOAT,
             None,
         );
-        gl.texture_parameter_i32(read_texture, gl::TEXTURE_MIN_FILTER, gl::NEAREST as _);
-        gl.texture_parameter_i32(read_texture, gl::TEXTURE_MAG_FILTER, gl::NEAREST as _);
+        gl.texture_parameter_i32(read_texture, gl::TEXTURE_MIN_FILTER, gl::LINEAR as _);
+        gl.texture_parameter_i32(read_texture, gl::TEXTURE_MAG_FILTER, gl::LINEAR as _);
+        gl.texture_parameter_i32(read_texture, gl::TEXTURE_WRAP_S, gl::CLAMP_TO_BORDER as _);
+        gl.texture_parameter_i32(read_texture, gl::TEXTURE_WRAP_T, gl::CLAMP_TO_BORDER as _);
 
         let mut write_texture = gl.create_texture().map_err(|e| format_err!("{}", e))?;
         gl.bind_texture(gl::TEXTURE_2D, Some(write_texture));
@@ -91,8 +93,13 @@ fn main() -> Result<()> {
             gl::FLOAT,
             None,
         );
-        gl.texture_parameter_i32(write_texture, gl::TEXTURE_MIN_FILTER, gl::NEAREST as _);
-        gl.texture_parameter_i32(write_texture, gl::TEXTURE_MAG_FILTER, gl::NEAREST as _);
+        gl.texture_parameter_i32(write_texture, gl::TEXTURE_MIN_FILTER, gl::LINEAR as _);
+        gl.texture_parameter_i32(write_texture, gl::TEXTURE_MAG_FILTER, gl::LINEAR as _);
+        gl.texture_parameter_i32(write_texture, gl::TEXTURE_MIN_FILTER, gl::LINEAR as _);
+        gl.texture_parameter_i32(write_texture, gl::TEXTURE_MAG_FILTER, gl::LINEAR as _);
+        gl.texture_parameter_i32(write_texture, gl::TEXTURE_WRAP_S, gl::CLAMP_TO_BORDER as _);
+        gl.texture_parameter_i32(write_texture, gl::TEXTURE_WRAP_T, gl::CLAMP_TO_BORDER as _);
+
 
         // Set up GL state
         gl.clear_color(0., 0., 0., 1.0);
