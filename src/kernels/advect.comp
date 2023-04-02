@@ -14,8 +14,8 @@ void main() {
     uv = uv * 2. - 1.;
 
     if (dt == 0.) {
-        //vec2 vel = float(length(uv) < 0.1) * vec2(500, 0);
-        vec2 vel = vec2(0);
+        vec2 vel = float(length(uv) < 0.2) * vec2(0, 1);
+        //vec2 vel = vec2(0);
         imageStore(write_img, xy, vec4(vel, 0, 0));
         return;
     }
@@ -26,17 +26,18 @@ void main() {
     u = texture(read_img, xy/size + vec2(0.5)/size1).x;
     v = texture(read_img, xy/size + vec2(0, 1)/size1).y;
     k = vec2(xy) - vec2(u, v) * dt;
-    float next_u = texture(read_img, k/size - vec2(0.5)/size1).x; 
+    float next_u = texture(read_img, k/size + vec2(0)/size1).x; 
 
     // Advect v
     u = texture(read_img, xy/size + vec2(1, 0)/size1).x;
     v = texture(read_img, xy/size + vec2(0.5)/size1).y;
     k = vec2(xy) - vec2(u, v) * dt;
-    float next_v = texture(read_img, k/size - vec2(0.5)/size1).y; 
+    float next_v = texture(read_img, k/size + vec2(0.5)/size1).y; 
 
     vec2 vel = vec2(next_u, next_v);
-    vel += float(length(uv) < 0.1) * vec2(-1, -1);
+    //vel += float(length(uv) < 0.1) * vec2(-1, -1);
 
     // Write semi-lagrangian calc
-    imageStore(write_img, xy, vec4(vel, 0, 0));
+    //imageStore(write_img, xy, vec4(vel, 0, 0));
+    imageStore(write_img, xy, texture(read_img, xy/size + vec2(1.)/size));
 }
