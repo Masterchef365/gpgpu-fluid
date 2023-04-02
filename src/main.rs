@@ -25,6 +25,8 @@ fn main() -> Result<()> {
             .unwrap();
         let gl = gl::Context::from_loader_function(|s| window.get_proc_address(s) as *const _);
 
+        let mut screen_size = (1024., 768.);
+
         // Particle vertex array
         let particle_vertex_array = gl
             .create_vertex_array()
@@ -171,6 +173,9 @@ fn main() -> Result<()> {
                     // Draw particles
                     gl.clear(gl::COLOR_BUFFER_BIT);
                     gl.use_program(Some(particle_shader));
+                    let screen_size_loc = gl.get_uniform_location(particle_shader, "screen_size");
+                    let (sx, sy) = screen_size;
+                    gl.uniform_2_f32(screen_size_loc.as_ref(), sx, sy);
                     gl.bind_vertex_array(Some(particle_vertex_array));
                     gl.draw_arrays(gl::POINTS, 0, N_PARTICLES);
 
@@ -180,7 +185,11 @@ fn main() -> Result<()> {
                 }
                 Event::WindowEvent { ref event, .. } => match event {
                     WindowEvent::Resized(physical_size) => {
+                        dbg!(physical_size);
                         window.resize(*physical_size);
+                        screen_size = (physical_size.width as f32, physical_size.height as f32);
+                        gl.scissor(0, 0, physical_size.width as i32, physical_size.height as i32);
+                        gl.viewport(0, 0, physical_size.width as i32, physical_size.height as i32);
                     }
                     WindowEvent::CloseRequested => {
                         gl.delete_program(particle_shader);
