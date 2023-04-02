@@ -5,8 +5,10 @@ use glutin::event::{Event, WindowEvent};
 use glutin::event_loop::ControlFlow;
 
 const N_PARTICLES: i32 = 10_000;
-const WIDTH: i32 = 500;
-const HEIGHT: i32 = 500;
+const LOCAL_SIZE: i32 = 32;
+const WIDTH: i32 = 16 * LOCAL_SIZE;
+const HEIGHT: i32 = 16 * LOCAL_SIZE;
+const N_ITERS: u32 = 15 * 2;
 
 fn main() -> Result<()> {
     unsafe {
@@ -46,18 +48,49 @@ fn main() -> Result<()> {
         ];
         let particle_shader = create_program(&gl, &shader_sources)?;
 
-        let particle_kernel = create_program(&gl, &[(gl::COMPUTE_SHADER, include_str!("kernels/particles.comp"))])?;
+        let particle_kernel = create_program(
+            &gl,
+            &[(gl::COMPUTE_SHADER, include_str!("kernels/particles.comp"))],
+        )?;
+        let jacobi_kernel = create_program(
+            &gl,
+            &[(gl::COMPUTE_SHADER, include_str!("kernels/jacobi.comp"))],
+        )?;
+        let advect_kernel = create_program(
+            &gl,
+            &[(gl::COMPUTE_SHADER, include_str!("kernels/advect.comp"))],
+        )?;
 
         // Set up textures
-        let read_texture = gl.create_texture().map_err(|e| format_err!("{}", e))?;
+        let mut read_texture = gl.create_texture().map_err(|e| format_err!("{}", e))?;
         gl.bind_texture(gl::TEXTURE_2D, Some(read_texture));
-        gl.tex_image_2d(gl::TEXTURE_2D, 0, gl::RG32F as _, WIDTH, HEIGHT, 0, gl::RG, gl::FLOAT, None);
+        gl.tex_image_2d(
+            gl::TEXTURE_2D,
+            0,
+            gl::RG32F as _,
+            WIDTH,
+            HEIGHT,
+            0,
+            gl::RG,
+            gl::FLOAT,
+            None,
+        );
 
-        let write_texture = gl.create_texture().map_err(|e| format_err!("{}", e))?;
+        let mut write_texture = gl.create_texture().map_err(|e| format_err!("{}", e))?;
         gl.bind_texture(gl::TEXTURE_2D, Some(write_texture));
-        gl.tex_image_2d(gl::TEXTURE_2D, 0, gl::RG32F as _, WIDTH, HEIGHT, 0, gl::RG, gl::FLOAT, None);
+        gl.tex_image_2d(
+            gl::TEXTURE_2D,
+            0,
+            gl::RG32F as _,
+            WIDTH,
+            HEIGHT,
+            0,
+            gl::RG,
+            gl::FLOAT,
+            None,
+        );
 
-        // Set up GL state 
+        // Set up GL state
         gl.clear_color(0., 0., 0., 1.0);
         gl.enable(gl::VERTEX_PROGRAM_POINT_SIZE);
 
@@ -74,18 +107,44 @@ fn main() -> Result<()> {
                     window.window().request_redraw();
                 }
                 Event::RedrawRequested(_) => {
+                    // Execute jacobi kernel
+                    gl.use_program(Some(jacobi_kernel));
+                    // Set particle buffer to binding=2
+                    gl.bind_buffer_base(gl::SHADER_STORAGE_BUFFER, 2, Some(particle_buffer));
+                    let parity_loc = gl.get_uniform_location(jacobi_kernel, "parity");
+                    for i in 0..N_ITERS {
+                        let parity = i % 2;
+                        gl.uniform_1_u32(parity_loc.as_ref(), parity);
+                        // Set read texture to binding=0
+                        gl.bind_image_texture(0, read_texture, 0, false, 0, gl::READ_WRITE, gl::RG32F);
+                        // Set write texture to binding=1
+                        gl.bind_image_texture(1, write_texture, 0, false, 0, gl::READ_WRITE, gl::RG32F);
+                        // Run kernel
+                        gl.dispatch_compute((WIDTH / LOCAL_SIZE) as _, (HEIGHT / LOCAL_SIZE) as _, 1);
+                        // Memory barrier for vertex shader
+                        gl.memory_barrier(gl::SHADER_IMAGE_ACCESS_BARRIER_BIT);
+
+                        std::mem::swap(&mut read_texture, &mut write_texture);
+                    }
+
+                    // Set read texture to binding=0
+                    gl.active_texture(gl::TEXTURE0);
+                    gl.bind_texture(gl::TEXTURE_2D, Some(read_texture));
+
+                    // Execute advection kernel
+                    gl.use_program(Some(advect_kernel));
+                    // Set dt
+                    let dt_loc = gl.get_uniform_location(advect_kernel, "dt");
+                    gl.uniform_1_f32(dt_loc.as_ref(), dt);
+                    gl.dispatch_compute((WIDTH / LOCAL_SIZE) as _, (HEIGHT / LOCAL_SIZE) as _, 1);
+                    // Memory barrier for vertex shader
+                    gl.memory_barrier(gl::SHADER_IMAGE_ACCESS_BARRIER_BIT);
+
                     // Execute particle kernel
                     gl.use_program(Some(particle_kernel));
                     // Set dt
                     let dt_loc = gl.get_uniform_location(particle_kernel, "dt");
                     gl.uniform_1_f32(dt_loc.as_ref(), dt);
-                    // Set read texture to binding=0
-                    gl.active_texture(gl::TEXTURE0);
-                    gl.bind_texture(gl::TEXTURE_2D, Some(read_texture));
-                    // Set write texture to binding=1
-                    gl.bind_image_texture(1, write_texture, 0, false, 0, gl::READ_WRITE, gl::RG32F);
-                    // Set particle buffer to binding=2
-                    gl.bind_buffer_base(gl::SHADER_STORAGE_BUFFER, 2, Some(particle_buffer));
                     // Dispatch
                     gl.dispatch_compute(N_PARTICLES as u32, 1, 1);
                     // Memory barrier for vertex shader

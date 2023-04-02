@@ -8,11 +8,6 @@ uniform layout(location=0) uint parity;
 void main() {
     ivec2 xy = ivec2(gl_GlobalInvocationID.xy);
 
-    // Enforce checkerboard pattern
-    if (((xy.x % 2) ^ (xy.y % 2)) == parity) {
-        return;
-    }
-
     // Read previous state
     ivec2 tl_pos = xy;
     ivec2 right_pos = xy + ivec2(1, 0);
@@ -22,14 +17,19 @@ void main() {
     vec2 right = imageLoad(read_img, right_pos).xy;
     vec2 bottom = imageLoad(read_img, bottom_pos).xy;
 
-    // Calculate divergence
-    float dx = right.x - tl.x;
-    float dy = bottom.y - tl.y;
+    // Enforce checkerboard pattern
+    if (((xy.x % 2) ^ (xy.y % 2)) == parity) {
+        imageStore(write_img, tl_pos, vec4(tl, 0, 0));
+    } else {
+        // Calculate divergence
+        float dx = right.x - tl.x;
+        float dy = bottom.y - tl.y;
 
-    float dF = (dx + dy) / 4;
+        float dF = (dx + dy) / 4;
 
-    // Write next state
-    imageStore(write_img, tl_pos, vec4(tl + vec2(dF, dF), 0, 0));
-    imageStore(write_img, right_pos, vec4(right - vec2(dF, 0), 0, 0));
-    imageStore(write_img, bottom_pos, vec4(bottom - vec2(0, dF), 0, 0));
+        // Write next state
+        imageStore(write_img, tl_pos, vec4(tl + vec2(dF, dF), 0, 0));
+        imageStore(write_img, right_pos, vec4(right - vec2(dF, 0), 0, 0));
+        imageStore(write_img, bottom_pos, vec4(bottom - vec2(0, dF), 0, 0));
+    }
 }
