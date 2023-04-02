@@ -1,8 +1,9 @@
 use glow::*;
 use glutin::event::{Event, WindowEvent};
 use glutin::event_loop::ControlFlow;
+use anyhow::{Result, format_err, bail, Context as AnyhowContext};
 
-fn main() {
+fn main() -> Result<()> {
     unsafe {
         // Create a context from a glutin window on non-wasm32 targets
         let event_loop = glutin::event_loop::EventLoop::new();
@@ -24,31 +25,9 @@ fn main() {
 
         let program = gl.create_program().expect("Cannot create program");
 
-        let (vertex_shader_source, fragment_shader_source) = (
-            r#"#version 450
-            const vec2 verts[3] = vec2[3](
-                vec2(0.5f, 1.0f),
-                vec2(0.0f, 0.0f),
-                vec2(1.0f, 0.0f)
-            );
-            out vec2 vert;
-            void main() {
-                vert = verts[gl_VertexID];
-                gl_Position = vec4(vert - 0.5, 0.0, 1.0);
-            }"#,
-            r#"
-            #version 450
-            precision mediump float;
-            in vec2 vert;
-            out vec4 color;
-            void main() {
-                color = vec4(vert, 0.5, 1.0);
-            }"#,
-        );
-
         let shader_sources = [
-            (glow::VERTEX_SHADER, vertex_shader_source),
-            (glow::FRAGMENT_SHADER, fragment_shader_source),
+            (glow::VERTEX_SHADER, include_str!("shaders/particles.vert")),
+            (glow::FRAGMENT_SHADER, include_str!("shaders/particles.frag")),
         ];
 
         let mut shaders = Vec::with_capacity(shader_sources.len());
@@ -77,7 +56,7 @@ fn main() {
         }
 
         gl.use_program(Some(program));
-        gl.clear_color(0.1, 0.2, 0.3, 1.0);
+        gl.clear_color(0., 0., 0., 1.0);
 
         // We handle events differently between targets
 
@@ -111,3 +90,52 @@ fn main() {
         });
     }
 }
+
+/// Compile and link program from sources
+pub fn create_program(
+    gl: &Context,
+    shader_sources: &[(&str, u32)],
+) -> Result<NativeProgram> {
+    unsafe {
+        let program = gl
+            .create_program()
+            .map_err(|e| format_err!("{:#}", e))
+            .context("Cannot create program")?;
+
+        let mut shaders = Vec::with_capacity(shader_sources.len());
+
+        for (shader_source, shader_type) in shader_sources.iter() {
+            // Compile
+            let shader = gl
+                .create_shader(*shader_type)
+                .map_err(|e| format_err!("{:#}", e))
+                .context("Cannot create program")?;
+
+            gl.shader_source(shader, &shader_source);
+            gl.compile_shader(shader);
+
+            if !gl.get_shader_compile_status(shader) {
+                bail!("{}", gl.get_shader_info_log(shader));
+            }
+
+            // Attach
+            gl.attach_shader(program, shader);
+            shaders.push(shader);
+        }
+
+        // Link
+        gl.link_program(program);
+        if !gl.get_program_link_status(program) {
+            bail!("{}", gl.get_program_info_log(program));
+        }
+
+        // Cleanup
+        for shader in shaders {
+            gl.detach_shader(program, shader);
+            gl.delete_shader(shader);
+        }
+
+        Ok(program)
+    }
+}
+
