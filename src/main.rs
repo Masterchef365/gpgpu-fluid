@@ -119,19 +119,20 @@ fn main() -> Result<()> {
                     // Execute jacobi kernel
                     gl.use_program(Some(jacobi_kernel));
                     let parity_loc = gl.get_uniform_location(jacobi_kernel, "parity");
-                    for i in 0..N_ITERS * 2 {
-                        let parity = i % 2;
-                        gl.uniform_1_u32(parity_loc.as_ref(), parity);
-                        // Set read texture to binding=0
-                        gl.bind_image_texture(0, read_texture, 0, false, 0, gl::READ_WRITE, gl::RG32F);
-                        // Set write texture to binding=1
-                        gl.bind_image_texture(1, write_texture, 0, false, 0, gl::READ_WRITE, gl::RG32F);
-                        // Run kernel
-                        gl.dispatch_compute((WIDTH / LOCAL_SIZE) as _, (HEIGHT / LOCAL_SIZE) as _, 1);
-                        // Memory barrier for vertex shader
-                        gl.memory_barrier(gl::SHADER_IMAGE_ACCESS_BARRIER_BIT);
+                    for _ in 0..N_ITERS * 2 {
+                        for parity in [0, 1] {
+                            gl.uniform_1_u32(parity_loc.as_ref(), parity);
+                            // Set read texture to binding=0
+                            gl.bind_image_texture(0, read_texture, 0, false, 0, gl::READ_WRITE, gl::RG32F);
+                            // Set write texture to binding=1
+                            gl.bind_image_texture(1, write_texture, 0, false, 0, gl::READ_WRITE, gl::RG32F);
+                            // Run kernel
+                            gl.dispatch_compute((WIDTH / LOCAL_SIZE) as _, (HEIGHT / LOCAL_SIZE) as _, 1);
+                            // Memory barrier for vertex shader
+                            gl.memory_barrier(gl::SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
-                        std::mem::swap(&mut read_texture, &mut write_texture);
+                            std::mem::swap(&mut read_texture, &mut write_texture);
+                        }
                     }
 
                     // Execute advection kernel
