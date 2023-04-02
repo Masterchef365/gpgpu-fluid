@@ -6,7 +6,8 @@ uniform layout(binding=1, rg32f) image2D write_img;
 uniform layout(location=0) float dt;
 
 vec2 adjusted_tex(vec2 pt) {
-    vec2 uv = (pt + vec2(0.5)) / imageSize(write_img);
+    vec2 size = imageSize(write_img);
+    vec2 uv = (pt + vec2(1)) / size;
     return texture(read_img, uv).xy;
 }
 
