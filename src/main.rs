@@ -8,7 +8,7 @@ use glutin::event_loop::ControlFlow;
 
 const N_PARTICLES: i32 = 1_000_000;
 const LOCAL_SIZE: i32 = 32;
-const WIDTH: i32 = 16 * LOCAL_SIZE + 1;
+const WIDTH: i32 = 26 * LOCAL_SIZE + 1;
 const HEIGHT: i32 = 16 * LOCAL_SIZE + 1;
 const N_ITERS: u32 = 30;
 const MAX_FINGIES: usize = 5;
@@ -255,7 +255,6 @@ fn main() -> Result<()> {
                         }
                         TouchPhase::Ended => {
                             fingors.remove(&touch.id);
-                            dbg!(&fingors);
                         }
                         _ => (),
                     },

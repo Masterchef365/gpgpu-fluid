@@ -9,9 +9,11 @@ uniform vec2 screen_size;
 out vec2 vert;
 
 void main() {
-    vert = particles[gl_VertexID] / vec2(imageSize(write_img));
+    vec2 size = vec2(imageSize(write_img));
+    vert = particles[gl_VertexID] / size;
     vec2 sp = vert;
     sp.x *= min(screen_size.x, screen_size.y)/screen_size.x;
+    sp.x *= size.x/size.y;
     sp = sp * 2. - 1.;
 
     gl_Position = vec4(sp, 0.0, 1.0);

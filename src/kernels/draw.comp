@@ -20,6 +20,7 @@ void main() {
 
     for (int i = 0; i < MAX_FINGIES; i++) {
         vec2 pen_pos = (vec2(0., 1.) - pens[i].xy) * tex_size * vec2(-1, 1);
+        pen_pos.x /= tex_size.x/tex_size.y;
         pen_pos.x /= min(screen_size.x, screen_size.y)/screen_size.x;
         vec2 pen_vel = pens[i].zw * tex_size * vec2(1, -1);
         float pen_dist = distance(xy, pen_pos);

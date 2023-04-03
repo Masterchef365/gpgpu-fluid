@@ -35,10 +35,11 @@ void main() {
             rand(vec2(idx+8))
         ) * 2. - 1.;
 
-        float k = 30.;
-        r.y = floor(r.y * k) / k;
+        vec2 k  = size/50.;
         if (rand(vec2(idx)) < 0.5) {
-            r = r.yx;
+            r.y = floor(r.y * k.y) / k.y;
+        } else {
+            r.x = floor(r.x * k.x) / k.x;
         }
 
         r += j/750.;
