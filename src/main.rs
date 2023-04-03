@@ -1,13 +1,13 @@
 extern crate glow as gl;
 use anyhow::{bail, format_err, Context as AnyhowContext, Result};
 use gl::HasContext;
-use glutin::event::{Event, WindowEvent};
+use glutin::event::{Event, TouchPhase, WindowEvent};
 use glutin::event_loop::ControlFlow;
 
 const N_PARTICLES: i32 = 400_000;
 const LOCAL_SIZE: i32 = 32;
-const WIDTH: i32 = 16 * LOCAL_SIZE+1;
-const HEIGHT: i32 = 16 * LOCAL_SIZE+1;
+const WIDTH: i32 = 16 * LOCAL_SIZE + 1;
+const HEIGHT: i32 = 16 * LOCAL_SIZE + 1;
 const N_ITERS: u32 = 30;
 
 fn main() -> Result<()> {
@@ -26,6 +26,7 @@ fn main() -> Result<()> {
         let gl = gl::Context::from_loader_function(|s| window.get_proc_address(s) as *const _);
 
         let mut screen_size = (1024., 768.);
+        let mut last_touch: Option<(f32, f32)> = None;
 
         // Particle vertex array
         let particle_vertex_array = gl
@@ -53,15 +54,24 @@ fn main() -> Result<()> {
         let particle_kernel = create_program(
             &gl,
             &[(gl::COMPUTE_SHADER, include_str!("kernels/particles.comp"))],
-        ).unwrap();
+        )
+        .unwrap();
         let jacobi_kernel = create_program(
             &gl,
             &[(gl::COMPUTE_SHADER, include_str!("kernels/jacobi.comp"))],
-        ).unwrap();
+        )
+        .unwrap();
         let advect_kernel = create_program(
             &gl,
             &[(gl::COMPUTE_SHADER, include_str!("kernels/advect.comp"))],
-        ).unwrap();
+        )
+        .unwrap();
+        let draw_kernel = create_program(
+            &gl,
+            &[(gl::COMPUTE_SHADER, include_str!("kernels/draw.comp"))],
+        )
+        .unwrap();
+
 
         // Set up textures
         let texture = || -> Result<gl::NativeTexture> {
@@ -81,7 +91,7 @@ fn main() -> Result<()> {
             gl.texture_parameter_i32(tex, gl::TEXTURE_MIN_FILTER, gl::LINEAR as _);
             gl.texture_parameter_i32(tex, gl::TEXTURE_MAG_FILTER, gl::LINEAR as _);
             gl.texture_parameter_i32(tex, gl::TEXTURE_WRAP_S, gl::REPEAT as _);
-            gl.texture_parameter_i32(tex, gl::TEXTURE_WRAP_T, gl::REPEAT  as _);
+            gl.texture_parameter_i32(tex, gl::TEXTURE_WRAP_T, gl::REPEAT as _);
             gl.tex_parameter_f32_slice(gl::TEXTURE_2D, gl::TEXTURE_BORDER_COLOR, &[0.0; 4]);
             Ok(tex)
         };
@@ -97,6 +107,7 @@ fn main() -> Result<()> {
         //gl.enable(gl::VERTEX_PROGRAM_POINT_SIZE);
 
         let mut dt = 0.;
+        let mut pen = [0.; 4];
 
         // Event loop
         event_loop.run(move |event, _, control_flow| {
@@ -124,7 +135,11 @@ fn main() -> Result<()> {
                         gl.bind_image_texture(3, write_v, 0, false, 0, gl::READ_WRITE, gl::R32F);
 
                         // Run kernel
-                        gl.dispatch_compute((WIDTH / LOCAL_SIZE) as _, (HEIGHT / LOCAL_SIZE) as _, 1);
+                        gl.dispatch_compute(
+                            (WIDTH / LOCAL_SIZE) as _,
+                            (HEIGHT / LOCAL_SIZE) as _,
+                            1,
+                        );
                         // Memory barrier for vertex shader
                         gl.memory_barrier(gl::SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
@@ -139,7 +154,7 @@ fn main() -> Result<()> {
                     gl.bind_texture(gl::TEXTURE_2D, Some(read_u));
                     gl.active_texture(gl::TEXTURE1);
                     gl.bind_texture(gl::TEXTURE_2D, Some(read_v));
-                    // Set write textures 
+                    // Set write textures
                     gl.bind_image_texture(2, write_u, 0, false, 0, gl::READ_WRITE, gl::R32F);
                     gl.bind_image_texture(3, write_v, 0, false, 0, gl::READ_WRITE, gl::R32F);
                     // Set dt
@@ -152,6 +167,26 @@ fn main() -> Result<()> {
                     std::mem::swap(&mut read_u, &mut write_u);
                     std::mem::swap(&mut read_v, &mut write_v);
 
+                    // Execute touch/mouse drawing kernel
+                    gl.use_program(Some(draw_kernel));
+                    // Set read textures
+                    gl.bind_image_texture(0, read_u, 0, false, 0, gl::READ_WRITE, gl::R32F);
+                    gl.bind_image_texture(1, read_v, 0, false, 0, gl::READ_WRITE, gl::R32F);
+                    // Set pen
+                    let pen_loc = gl.get_uniform_location(draw_kernel, "pen");
+                    let [x, y, u, v] = pen;
+                    gl.uniform_4_f32(pen_loc.as_ref(), x, y, u, v);
+                    // Set screen size
+                    let screen_size_loc = gl.get_uniform_location(draw_kernel, "screen_size");
+                    let (sx, sy) = screen_size;
+                    gl.uniform_2_f32(screen_size_loc.as_ref(), sx, sy);
+                    gl.dispatch_compute(
+                        (WIDTH / LOCAL_SIZE) as _,
+                        (HEIGHT / LOCAL_SIZE) as _,
+                        1,
+                    );
+
+
                     // Execute particle kernel
                     gl.use_program(Some(particle_kernel));
                     // Set read textures
@@ -159,7 +194,7 @@ fn main() -> Result<()> {
                     gl.bind_texture(gl::TEXTURE_2D, Some(read_u));
                     gl.active_texture(gl::TEXTURE1);
                     gl.bind_texture(gl::TEXTURE_2D, Some(read_v));
-                    // Set write textures 
+                    // Set write textures
                     gl.bind_image_texture(2, write_u, 0, false, 0, gl::READ_WRITE, gl::R32F);
                     gl.bind_image_texture(3, write_v, 0, false, 0, gl::READ_WRITE, gl::R32F);
                     // Set particle buffer
@@ -182,6 +217,9 @@ fn main() -> Result<()> {
                     gl.draw_arrays(gl::POINTS, 0, N_PARTICLES);
 
                     dt = 0.1;
+                    dbg!(pen);
+                    last_touch = None;
+                    pen = [0.; 4];
 
                     window.swap_buffers().unwrap();
                 }
@@ -189,14 +227,38 @@ fn main() -> Result<()> {
                     WindowEvent::Resized(physical_size) => {
                         window.resize(*physical_size);
                         screen_size = (physical_size.width as f32, physical_size.height as f32);
-                        gl.scissor(0, 0, physical_size.width as i32, physical_size.height as i32);
-                        gl.viewport(0, 0, physical_size.width as i32, physical_size.height as i32);
+                        gl.scissor(
+                            0,
+                            0,
+                            physical_size.width as i32,
+                            physical_size.height as i32,
+                        );
+                        gl.viewport(
+                            0,
+                            0,
+                            physical_size.width as i32,
+                            physical_size.height as i32,
+                        );
                     }
                     WindowEvent::CloseRequested => {
                         gl.delete_program(particle_shader);
                         gl.delete_vertex_array(particle_vertex_array);
                         *control_flow = ControlFlow::Exit
                     }
+                    WindowEvent::Touch(touch) => match touch.phase {
+                        TouchPhase::Moved => {
+                            if let Some(last_touch) = last_touch {
+                                pen = [
+                                    touch.location.x as f32 / screen_size.0,
+                                    touch.location.y as f32 / screen_size.1,
+                                    (touch.location.x as f32 - last_touch.0) / screen_size.0,
+                                    (touch.location.y as f32 - last_touch.1) / screen_size.1,
+                                ];
+                            }
+                            last_touch = Some((touch.location.x as f32, touch.location.y as f32));
+                        }
+                        _ => (),
+                    },
                     _ => (),
                 },
                 _ => (),

@@ -42,7 +42,7 @@ void main() {
     float next_v = bilinear(read_v, k + vec2(0.5)).x;
 
     vec2 vel = vec2(next_u, next_v);
-    vel += float(length(uv) < 0.2) * vec2(0.2, 0);
+    //vel += float(length(uv) < 0.2) * vec2(0.2, 0);
 
     // Write semi-lagrangian calc
     imageStore(write_u, xy, vec4(vel.x, 0,0,0));
