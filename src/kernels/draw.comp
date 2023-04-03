@@ -25,7 +25,9 @@ void main() {
         vec2 pen_vel = pens[i].zw * tex_size * vec2(1, -1);
         float pen_dist = distance(xy, pen_pos);
         //vel += float(length(pen_pos) < PEN_RADIUS) * pen.zw;
-        vel += float(pen_dist < PEN_RADIUS) * pen_vel * 2.;
+        if (pen_dist < PEN_RADIUS) {
+            vel = pen_vel * 2.;
+        }
     }
 
     // Write semi-lagrangian calc
