@@ -20,7 +20,7 @@ void main() {
     uv = uv * 2. - 1.;
 
     if (dt == 0.) {
-        vec2 vel = float(length(uv) < 0.2) * vec2(30, 0);
+        vec2 vel = float(length(uv) < 0.2) * vec2(20, 20);
         //vec2 vel = vec2(0);
         imageStore(write_u, xy, vec4(vel.x, 0,0,0));
         imageStore(write_v, xy, vec4(vel.y, 0,0,0));

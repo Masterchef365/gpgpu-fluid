@@ -30,8 +30,8 @@ void main() {
 
         vec2 r = vec2(rx, ry);
 
-        float k = 10.;
-        r.y = floor(r.y * k) / k;
+        float k = 2.;
+        r.x = 0.5;
 
         if (rand(vec2(idx)) < 0.5) {
             r = r.yx;
@@ -45,5 +45,6 @@ void main() {
     float vel_v = texture(read_v, uv).x;
     vec2 vel = vec2(vel_u, vel_v);
 
-    particles[idx] += normalize(vel) * dt * max(length(vel), 1.);
+    if (length(vel) > 3.)
+        particles[idx] += normalize(vel) * dt * max(length(vel), 1.);
 }
