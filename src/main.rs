@@ -213,7 +213,7 @@ fn main() -> Result<()> {
                     let (sx, sy) = screen_size;
                     gl.uniform_2_f32(screen_size_loc.as_ref(), sx, sy);
                     gl.bind_vertex_array(Some(particle_vertex_array));
-                    gl.draw_arrays(gl::POINTS, 0, N_PARTICLES);
+                    gl.draw_arrays(gl::LINES, 0, N_PARTICLES*2);
 
                     dt = 0.1;
                     fingors.clear();
