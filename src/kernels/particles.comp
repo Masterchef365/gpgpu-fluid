@@ -28,7 +28,12 @@ void main() {
         float rx = rand(last_state + vec2(2344., idx) / 1000);
         float ry = rand(last_state + vec2(1244., idx) / 1000);
 
-        particles[idx] = vec2(rx, ry) * size;
+        vec2 r = vec2(rx, ry);
+
+        float k = 30.;
+        r.y = floor(r.y * k) / k;
+
+        particles[idx] = r * size;
     }
 
     vec2 uv = particles[idx] / imageSize(write_img);
