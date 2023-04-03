@@ -10,7 +10,7 @@ const N_PARTICLES: i32 = 500_000;
 const LOCAL_SIZE: i32 = 32;
 const WIDTH: i32 = 13 * LOCAL_SIZE;
 const HEIGHT: i32 = 8 * LOCAL_SIZE;
-const N_ITERS: u32 = 30;
+const N_ITERS: u32 = 40;
 const MAX_FINGIES: usize = 5;
 
 fn main() -> Result<()> {
