@@ -8,10 +8,12 @@ use glutin::event_loop::ControlFlow;
 
 const N_PARTICLES: i32 = 150_000;
 const LOCAL_SIZE: i32 = 32;
-const WIDTH: i32 = 13 * LOCAL_SIZE;
-const HEIGHT: i32 = 8 * LOCAL_SIZE;
+const WIDTH: i32 = 26 * LOCAL_SIZE;
+const HEIGHT: i32 = 16 * LOCAL_SIZE;
 const N_ITERS: u32 = 40;
 const MAX_FINGIES: usize = 5;
+
+const N_CLEAR_FRAMES: usize = 4;
 
 fn main() -> Result<()> {
     unsafe {
@@ -111,6 +113,7 @@ fn main() -> Result<()> {
 
         let mut dt = 0.;
         let mut fingors: HashMap<u64, [f32; 4]> = HashMap::new();
+        let mut clear_frames = 0;
 
         // Event loop
         event_loop.run(move |event, _, control_flow| {
@@ -208,8 +211,13 @@ fn main() -> Result<()> {
                     // Memory barrier for vertex shader
                     gl.memory_barrier(gl::SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
+                    // Clear on command
+                    if clear_frames > 0 {
+                        gl.clear(gl::COLOR_BUFFER_BIT);
+                        clear_frames -= 1;
+                    }
+
                     // Draw particles
-                    //gl.clear(gl::COLOR_BUFFER_BIT);
                     gl.use_program(Some(particle_shader));
                     let screen_size_loc = gl.get_uniform_location(particle_shader, "screen_size");
                     let (sx, sy) = screen_size;
@@ -264,8 +272,10 @@ fn main() -> Result<()> {
                     WindowEvent::KeyboardInput { input, .. } => {
                         if let Some(key) = input.virtual_keycode {
                             match key {
-                                VirtualKeyCode::Space => dt = 0.,
-                                VirtualKeyCode::C => gl.clear(gl::COLOR_BUFFER_BIT),
+                                // Reset fluid
+                                VirtualKeyCode::R => dt = 0.,
+                                // Clear screen
+                                VirtualKeyCode::C => clear_frames = N_CLEAR_FRAMES,
                                 _ => (),
                             }
                         }
