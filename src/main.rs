@@ -209,7 +209,7 @@ fn main() -> Result<()> {
                     gl.memory_barrier(gl::SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
                     // Draw particles
-                    gl.clear(gl::COLOR_BUFFER_BIT);
+                    //gl.clear(gl::COLOR_BUFFER_BIT);
                     gl.use_program(Some(particle_shader));
                     let screen_size_loc = gl.get_uniform_location(particle_shader, "screen_size");
                     let (sx, sy) = screen_size;
@@ -265,6 +265,7 @@ fn main() -> Result<()> {
                         if let Some(key) = input.virtual_keycode {
                             match key {
                                 VirtualKeyCode::Space => dt = 0.,
+                                VirtualKeyCode::C => gl.clear(gl::COLOR_BUFFER_BIT),
                                 _ => (),
                             }
                         }

@@ -24,7 +24,7 @@ void main() {
         float v = texture(read_v, vert + vec2(1, 0.)/size).x;
         vec2 uv = vec2(u, v);
 
-        sp -= uv/size.x;
+        sp += uv/size.x;
     }
 
     sp.x *= min(screen_size.x, screen_size.y)/screen_size.x;
