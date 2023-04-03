@@ -217,7 +217,6 @@ fn main() -> Result<()> {
                     gl.draw_arrays(gl::POINTS, 0, N_PARTICLES);
 
                     dt = 0.1;
-                    dbg!(pen);
                     last_touch = None;
                     pen = [0.; 4];
 

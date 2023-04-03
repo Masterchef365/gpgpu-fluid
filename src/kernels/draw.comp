@@ -22,7 +22,7 @@ void main() {
     vec2 pen_vel = pen.zw * tex_size * vec2(1, -1);
     float pen_dist = distance(xy, pen_pos);
     //vel += float(length(pen_pos) < PEN_RADIUS) * pen.zw;
-    vel += float(pen_dist < PEN_RADIUS) * pen_vel;
+    vel += float(pen_dist < PEN_RADIUS) * pen_vel * 2.;
 
     // Write semi-lagrangian calc
     imageStore(read_u, xy, vec4(vel.x, 0,0,0));
