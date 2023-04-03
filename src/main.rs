@@ -8,8 +8,8 @@ use glutin::event_loop::ControlFlow;
 
 const N_PARTICLES: i32 = 150_000;
 const LOCAL_SIZE: i32 = 32;
-const WIDTH: i32 = 26 * LOCAL_SIZE;
-const HEIGHT: i32 = 16 * LOCAL_SIZE;
+const WIDTH: i32 = 19 * LOCAL_SIZE;
+const HEIGHT: i32 = 12 * LOCAL_SIZE;
 const N_ITERS: u32 = 40;
 const MAX_FINGIES: usize = 5;
 
