@@ -80,9 +80,9 @@ fn main() -> Result<()> {
             );
             gl.texture_parameter_i32(tex, gl::TEXTURE_MIN_FILTER, gl::LINEAR as _);
             gl.texture_parameter_i32(tex, gl::TEXTURE_MAG_FILTER, gl::LINEAR as _);
-            gl.texture_parameter_i32(tex, gl::TEXTURE_WRAP_S, gl::CLAMP_TO_BORDER as _);
-            gl.texture_parameter_i32(tex, gl::TEXTURE_WRAP_T, gl::CLAMP_TO_BORDER as _);
-            gl.tex_parameter_f32_slice(gl::TEXTURE_2D, gl::TEXTURE_BORDER_COLOR, &[0.0; 4]);
+            gl.texture_parameter_i32(tex, gl::TEXTURE_WRAP_S, gl::MIRRORED_REPEAT as _);
+            gl.texture_parameter_i32(tex, gl::TEXTURE_WRAP_T, gl::MIRRORED_REPEAT as _);
+            //gl.tex_parameter_f32_slice(gl::TEXTURE_2D, gl::TEXTURE_BORDER_COLOR, &[0.0; 4]);
             Ok(tex)
         };
 

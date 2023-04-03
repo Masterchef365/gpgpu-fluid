@@ -7,6 +7,10 @@ uniform layout(binding=2, r32f) restrict image2D write_u;
 uniform layout(binding=3, r32f) restrict image2D write_v;
 uniform layout(location=0) float dt;
 
+float bilinear(sampler2D img, vec2 pt) {
+    return texture(img, fract(pt / imageSize(write_u))).x;
+}
+
 void main() {
     ivec2 xy = ivec2(gl_GlobalInvocationID.xy);
     vec2 tex_size = vec2(imageSize(write_u));
@@ -25,19 +29,19 @@ void main() {
     // Advect u
     float u, v;
     vec2 k;
-    u = texture(read_u, (xy + vec2(0.5))/tex_size).x;
-    v = texture(read_v, (xy + vec2(1,0))/tex_size).x;
+    u = bilinear(read_u, xy + vec2(0.5));
+    v = bilinear(read_v, xy + vec2(1,0));
     k = vec2(xy) - vec2(u, v) * dt;
-    float next_u = texture(read_u, (k + vec2(0.5))/tex_size).x;
+    float next_u = bilinear(read_u, k + vec2(0.5)).x;
 
     // Advect v
-    u = texture(read_u, (xy + vec2(0,1))/tex_size).x;
-    v = texture(read_v, (xy + vec2(0.5))/tex_size).x;
+    u = bilinear(read_u, xy + vec2(0,1)).x;
+    v = bilinear(read_v, xy + vec2(0.5)).x;
     k = vec2(xy) - vec2(u, v) * dt;
-    float next_v = texture(read_v, (k + vec2(0.5))/tex_size).x;
+    float next_v = bilinear(read_v, k + vec2(0.5)).x;
 
     vec2 vel = vec2(next_u, next_v);
-    vel += float(length(uv) < 0.4) * vec2(1., 0);
+    vel += float(length(uv) < 0.2) * vec2(1., 0);
 
     // Write semi-lagrangian calc
     imageStore(write_u, xy, vec4(vel.x, 0,0,0));
