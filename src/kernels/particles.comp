@@ -19,10 +19,10 @@ void main() {
 
     bool do_reset = dt == 0.;
     vec2 size = vec2(imageSize(write_img));
-    bool out_bounds = last_state.x < 0.
+    bool out_bounds = false;/*last_state.x < 0.
         || last_state.y < 0 
         || last_state.x > size.x 
-        || last_state.y > size.y;
+        || last_state.y > size.y;*/
 
     if (do_reset || out_bounds) {
         float rx = rand(last_state + vec2(2344., idx) / 1000);
@@ -30,8 +30,12 @@ void main() {
 
         vec2 r = vec2(rx, ry);
 
-        float k = 30.;
+        float k = 10.;
         r.y = floor(r.y * k) / k;
+
+        if (rand(vec2(idx)) < 0.5) {
+            r = r.yx;
+        }
 
         particles[idx] = r * size;
     }
