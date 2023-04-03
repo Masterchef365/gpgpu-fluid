@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 use anyhow::{bail, format_err, Context as AnyhowContext, Result};
 use gl::HasContext;
-use glutin::event::{Event, TouchPhase, WindowEvent, VirtualKeyCode};
+use glutin::event::{ElementState, Event, TouchPhase, VirtualKeyCode, WindowEvent};
 use glutin::event_loop::ControlFlow;
 
 const N_PARTICLES: i32 = 150_000;
@@ -107,13 +107,13 @@ fn main() -> Result<()> {
 
         // Set up GL state
         gl.clear_color(0., 0., 0., 1.0);
-        gl.enable(gl::BLEND);
         gl.blend_func(gl::SRC_ALPHA, gl::ONE);
         //gl.enable(gl::VERTEX_PROGRAM_POINT_SIZE);
 
         let mut dt = 0.;
         let mut fingors: HashMap<u64, [f32; 4]> = HashMap::new();
         let mut clear_frames = 0;
+        let mut pause = false;
 
         // Event loop
         event_loop.run(move |event, _, control_flow| {
@@ -126,21 +126,72 @@ fn main() -> Result<()> {
                     window.window().request_redraw();
                 }
                 Event::RedrawRequested(_) => {
-                    // Execute jacobi kernel
-                    gl.use_program(Some(jacobi_kernel));
-                    let parity_loc = gl.get_uniform_location(jacobi_kernel, "parity");
-                    for i in 0..N_ITERS * 2 {
-                        let parity = i % 2;
+                    // Clear on command
+                    if clear_frames > 0 {
+                        gl.clear(gl::COLOR_BUFFER_BIT);
+                        clear_frames -= 1;
+                    }
 
-                        gl.uniform_1_u32(parity_loc.as_ref(), parity);
+                    if pause {
+                        gl.disable(gl::BLEND);
+                    } else {
+                        gl.enable(gl::BLEND);
+                        // Execute jacobi kernel
+                        gl.use_program(Some(jacobi_kernel));
+                        let parity_loc = gl.get_uniform_location(jacobi_kernel, "parity");
+                        for i in 0..N_ITERS * 2 {
+                            let parity = i % 2;
+
+                            gl.uniform_1_u32(parity_loc.as_ref(), parity);
+                            // Set read textures
+                            gl.bind_image_texture(0, read_u, 0, false, 0, gl::READ_WRITE, gl::R32F);
+                            gl.bind_image_texture(1, read_v, 0, false, 0, gl::READ_WRITE, gl::R32F);
+                            // Set write textures
+                            gl.bind_image_texture(
+                                2,
+                                write_u,
+                                0,
+                                false,
+                                0,
+                                gl::READ_WRITE,
+                                gl::R32F,
+                            );
+                            gl.bind_image_texture(
+                                3,
+                                write_v,
+                                0,
+                                false,
+                                0,
+                                gl::READ_WRITE,
+                                gl::R32F,
+                            );
+
+                            // Run kernel
+                            gl.dispatch_compute(
+                                (WIDTH / LOCAL_SIZE) as _,
+                                (HEIGHT / LOCAL_SIZE) as _,
+                                1,
+                            );
+                            // Memory barrier for vertex shader
+                            gl.memory_barrier(gl::SHADER_IMAGE_ACCESS_BARRIER_BIT);
+
+                            std::mem::swap(&mut read_u, &mut write_u);
+                            std::mem::swap(&mut read_v, &mut write_v);
+                        }
+
+                        // Execute advection kernel
+                        gl.use_program(Some(advect_kernel));
                         // Set read textures
-                        gl.bind_image_texture(0, read_u, 0, false, 0, gl::READ_WRITE, gl::R32F);
-                        gl.bind_image_texture(1, read_v, 0, false, 0, gl::READ_WRITE, gl::R32F);
+                        gl.active_texture(gl::TEXTURE0);
+                        gl.bind_texture(gl::TEXTURE_2D, Some(read_u));
+                        gl.active_texture(gl::TEXTURE1);
+                        gl.bind_texture(gl::TEXTURE_2D, Some(read_v));
                         // Set write textures
                         gl.bind_image_texture(2, write_u, 0, false, 0, gl::READ_WRITE, gl::R32F);
                         gl.bind_image_texture(3, write_v, 0, false, 0, gl::READ_WRITE, gl::R32F);
-
-                        // Run kernel
+                        // Set dt
+                        let dt_loc = gl.get_uniform_location(advect_kernel, "dt");
+                        gl.uniform_1_f32(dt_loc.as_ref(), dt);
                         gl.dispatch_compute(
                             (WIDTH / LOCAL_SIZE) as _,
                             (HEIGHT / LOCAL_SIZE) as _,
@@ -151,79 +202,59 @@ fn main() -> Result<()> {
 
                         std::mem::swap(&mut read_u, &mut write_u);
                         std::mem::swap(&mut read_v, &mut write_v);
+
+                        // Execute touch/mouse drawing kernel
+                        gl.use_program(Some(draw_kernel));
+                        // Set read textures
+                        gl.bind_image_texture(0, read_u, 0, false, 0, gl::READ_WRITE, gl::R32F);
+                        gl.bind_image_texture(1, read_v, 0, false, 0, gl::READ_WRITE, gl::R32F);
+                        // Set pens
+                        let mut pen_keys: Vec<u64> = fingors.keys().copied().collect();
+                        pen_keys.sort();
+                        let mut pens: Vec<f32> =
+                            pen_keys.iter().map(|id| fingors[id]).flatten().collect();
+                        pens.resize(4 * MAX_FINGIES, 0.);
+                        let pen_loc = gl.get_uniform_location(draw_kernel, "pens");
+                        gl.uniform_4_f32_slice(pen_loc.as_ref(), &pens);
+                        // Set screen size
+                        let screen_size_loc = gl.get_uniform_location(draw_kernel, "screen_size");
+                        let (sx, sy) = screen_size;
+                        gl.uniform_2_f32(screen_size_loc.as_ref(), sx, sy);
+                        gl.dispatch_compute(
+                            (WIDTH / LOCAL_SIZE) as _,
+                            (HEIGHT / LOCAL_SIZE) as _,
+                            1,
+                        );
+
+                        // Execute particle kernel
+                        gl.use_program(Some(particle_kernel));
+                        // Set read textures
+                        gl.active_texture(gl::TEXTURE0);
+                        gl.bind_texture(gl::TEXTURE_2D, Some(read_u));
+                        gl.active_texture(gl::TEXTURE1);
+                        gl.bind_texture(gl::TEXTURE_2D, Some(read_v));
+                        // Set write textures
+                        gl.bind_image_texture(2, write_u, 0, false, 0, gl::READ_WRITE, gl::R32F);
+                        gl.bind_image_texture(3, write_v, 0, false, 0, gl::READ_WRITE, gl::R32F);
+                        // Set particle buffer
+                        gl.bind_buffer_base(gl::SHADER_STORAGE_BUFFER, 4, Some(particle_buffer));
+                        // Set dt
+                        let dt_loc = gl.get_uniform_location(particle_kernel, "dt");
+                        gl.uniform_1_f32(dt_loc.as_ref(), dt);
+                        // Dispatch
+                        gl.dispatch_compute(N_PARTICLES as u32, 1, 1);
+                        // Memory barrier for vertex shader
+                        gl.memory_barrier(gl::SHADER_IMAGE_ACCESS_BARRIER_BIT);
+
+                        // Draw particles
+                        gl.use_program(Some(particle_shader));
+                        let screen_size_loc =
+                            gl.get_uniform_location(particle_shader, "screen_size");
+                        let (sx, sy) = screen_size;
+                        gl.uniform_2_f32(screen_size_loc.as_ref(), sx, sy);
+                        gl.bind_vertex_array(Some(particle_vertex_array));
+                        gl.draw_arrays(gl::LINES, 0, N_PARTICLES * 2);
                     }
-
-                    // Execute advection kernel
-                    gl.use_program(Some(advect_kernel));
-                    // Set read textures
-                    gl.active_texture(gl::TEXTURE0);
-                    gl.bind_texture(gl::TEXTURE_2D, Some(read_u));
-                    gl.active_texture(gl::TEXTURE1);
-                    gl.bind_texture(gl::TEXTURE_2D, Some(read_v));
-                    // Set write textures
-                    gl.bind_image_texture(2, write_u, 0, false, 0, gl::READ_WRITE, gl::R32F);
-                    gl.bind_image_texture(3, write_v, 0, false, 0, gl::READ_WRITE, gl::R32F);
-                    // Set dt
-                    let dt_loc = gl.get_uniform_location(advect_kernel, "dt");
-                    gl.uniform_1_f32(dt_loc.as_ref(), dt);
-                    gl.dispatch_compute((WIDTH / LOCAL_SIZE) as _, (HEIGHT / LOCAL_SIZE) as _, 1);
-                    // Memory barrier for vertex shader
-                    gl.memory_barrier(gl::SHADER_IMAGE_ACCESS_BARRIER_BIT);
-
-                    std::mem::swap(&mut read_u, &mut write_u);
-                    std::mem::swap(&mut read_v, &mut write_v);
-
-                    // Execute touch/mouse drawing kernel
-                    gl.use_program(Some(draw_kernel));
-                    // Set read textures
-                    gl.bind_image_texture(0, read_u, 0, false, 0, gl::READ_WRITE, gl::R32F);
-                    gl.bind_image_texture(1, read_v, 0, false, 0, gl::READ_WRITE, gl::R32F);
-                    // Set pens
-                    let mut pen_keys: Vec<u64> = fingors.keys().copied().collect();
-                    pen_keys.sort();
-                    let mut pens: Vec<f32> = pen_keys.iter().map(|id| fingors[id]).flatten().collect();
-                    pens.resize(4*MAX_FINGIES, 0.);
-                    let pen_loc = gl.get_uniform_location(draw_kernel, "pens");
-                    gl.uniform_4_f32_slice(pen_loc.as_ref(), &pens);
-                    // Set screen size
-                    let screen_size_loc = gl.get_uniform_location(draw_kernel, "screen_size");
-                    let (sx, sy) = screen_size;
-                    gl.uniform_2_f32(screen_size_loc.as_ref(), sx, sy);
-                    gl.dispatch_compute((WIDTH / LOCAL_SIZE) as _, (HEIGHT / LOCAL_SIZE) as _, 1);
-
-                    // Execute particle kernel
-                    gl.use_program(Some(particle_kernel));
-                    // Set read textures
-                    gl.active_texture(gl::TEXTURE0);
-                    gl.bind_texture(gl::TEXTURE_2D, Some(read_u));
-                    gl.active_texture(gl::TEXTURE1);
-                    gl.bind_texture(gl::TEXTURE_2D, Some(read_v));
-                    // Set write textures
-                    gl.bind_image_texture(2, write_u, 0, false, 0, gl::READ_WRITE, gl::R32F);
-                    gl.bind_image_texture(3, write_v, 0, false, 0, gl::READ_WRITE, gl::R32F);
-                    // Set particle buffer
-                    gl.bind_buffer_base(gl::SHADER_STORAGE_BUFFER, 4, Some(particle_buffer));
-                    // Set dt
-                    let dt_loc = gl.get_uniform_location(particle_kernel, "dt");
-                    gl.uniform_1_f32(dt_loc.as_ref(), dt);
-                    // Dispatch
-                    gl.dispatch_compute(N_PARTICLES as u32, 1, 1);
-                    // Memory barrier for vertex shader
-                    gl.memory_barrier(gl::SHADER_IMAGE_ACCESS_BARRIER_BIT);
-
-                    // Clear on command
-                    if clear_frames > 0 {
-                        gl.clear(gl::COLOR_BUFFER_BIT);
-                        clear_frames -= 1;
-                    }
-
-                    // Draw particles
-                    gl.use_program(Some(particle_shader));
-                    let screen_size_loc = gl.get_uniform_location(particle_shader, "screen_size");
-                    let (sx, sy) = screen_size;
-                    gl.uniform_2_f32(screen_size_loc.as_ref(), sx, sy);
-                    gl.bind_vertex_array(Some(particle_vertex_array));
-                    gl.draw_arrays(gl::LINES, 0, N_PARTICLES*2);
 
                     dt = 0.1;
                     fingors.clear();
@@ -232,6 +263,7 @@ fn main() -> Result<()> {
                 }
                 Event::WindowEvent { ref event, .. } => match event {
                     WindowEvent::Resized(physical_size) => {
+                        clear_frames += N_CLEAR_FRAMES;
                         window.resize(*physical_size);
                         screen_size = (physical_size.width as f32, physical_size.height as f32);
                         gl.scissor(
@@ -273,9 +305,18 @@ fn main() -> Result<()> {
                         if let Some(key) = input.virtual_keycode {
                             match key {
                                 // Reset fluid
-                                VirtualKeyCode::R => dt = 0.,
+                                VirtualKeyCode::R => {
+                                    clear_frames = N_CLEAR_FRAMES;
+                                    dt = 0.;
+                                }
                                 // Clear screen
                                 VirtualKeyCode::C => clear_frames = N_CLEAR_FRAMES,
+                                // Pause
+                                VirtualKeyCode::Space => {
+                                    if input.state == ElementState::Pressed {
+                                        pause = !pause
+                                    }
+                                }
                                 _ => (),
                             }
                         }
