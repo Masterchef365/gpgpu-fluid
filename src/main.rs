@@ -216,6 +216,7 @@ fn main() -> Result<()> {
                     gl.draw_arrays(gl::POINTS, 0, N_PARTICLES);
 
                     dt = 0.1;
+                    fingors.clear();
 
                     window.swap_buffers().unwrap();
                 }
