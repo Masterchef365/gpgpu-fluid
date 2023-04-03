@@ -1,4 +1,6 @@
 extern crate glow as gl;
+use std::collections::HashMap;
+
 use anyhow::{bail, format_err, Context as AnyhowContext, Result};
 use gl::HasContext;
 use glutin::event::{Event, TouchPhase, WindowEvent};
@@ -9,6 +11,7 @@ const LOCAL_SIZE: i32 = 32;
 const WIDTH: i32 = 16 * LOCAL_SIZE + 1;
 const HEIGHT: i32 = 16 * LOCAL_SIZE + 1;
 const N_ITERS: u32 = 30;
+const MAX_FINGIES: usize = 5;
 
 fn main() -> Result<()> {
     unsafe {
@@ -26,7 +29,6 @@ fn main() -> Result<()> {
         let gl = gl::Context::from_loader_function(|s| window.get_proc_address(s) as *const _);
 
         let mut screen_size = (1024., 768.);
-        let mut last_touch: Option<(f32, f32)> = None;
 
         // Particle vertex array
         let particle_vertex_array = gl
@@ -72,7 +74,6 @@ fn main() -> Result<()> {
         )
         .unwrap();
 
-
         // Set up textures
         let texture = || -> Result<gl::NativeTexture> {
             let tex = gl.create_texture().map_err(|e| format_err!("{}", e))?;
@@ -107,7 +108,7 @@ fn main() -> Result<()> {
         //gl.enable(gl::VERTEX_PROGRAM_POINT_SIZE);
 
         let mut dt = 0.;
-        let mut pen = [0.; 4];
+        let mut fingors: HashMap<u64, [f32; 4]> = HashMap::new();
 
         // Event loop
         event_loop.run(move |event, _, control_flow| {
@@ -172,20 +173,18 @@ fn main() -> Result<()> {
                     // Set read textures
                     gl.bind_image_texture(0, read_u, 0, false, 0, gl::READ_WRITE, gl::R32F);
                     gl.bind_image_texture(1, read_v, 0, false, 0, gl::READ_WRITE, gl::R32F);
-                    // Set pen
-                    let pen_loc = gl.get_uniform_location(draw_kernel, "pen");
-                    let [x, y, u, v] = pen;
-                    gl.uniform_4_f32(pen_loc.as_ref(), x, y, u, v);
+                    // Set pens
+                    let mut pen_keys: Vec<u64> = fingors.keys().copied().collect();
+                    pen_keys.sort();
+                    let mut pens: Vec<f32> = pen_keys.iter().map(|id| fingors[id]).flatten().collect();
+                    pens.resize(4*MAX_FINGIES, 0.);
+                    let pen_loc = gl.get_uniform_location(draw_kernel, "pens");
+                    gl.uniform_4_f32_slice(pen_loc.as_ref(), &pens);
                     // Set screen size
                     let screen_size_loc = gl.get_uniform_location(draw_kernel, "screen_size");
                     let (sx, sy) = screen_size;
                     gl.uniform_2_f32(screen_size_loc.as_ref(), sx, sy);
-                    gl.dispatch_compute(
-                        (WIDTH / LOCAL_SIZE) as _,
-                        (HEIGHT / LOCAL_SIZE) as _,
-                        1,
-                    );
-
+                    gl.dispatch_compute((WIDTH / LOCAL_SIZE) as _, (HEIGHT / LOCAL_SIZE) as _, 1);
 
                     // Execute particle kernel
                     gl.use_program(Some(particle_kernel));
@@ -217,8 +216,6 @@ fn main() -> Result<()> {
                     gl.draw_arrays(gl::POINTS, 0, N_PARTICLES);
 
                     dt = 0.1;
-                    last_touch = None;
-                    pen = [0.; 4];
 
                     window.swap_buffers().unwrap();
                 }
@@ -246,15 +243,19 @@ fn main() -> Result<()> {
                     }
                     WindowEvent::Touch(touch) => match touch.phase {
                         TouchPhase::Moved => {
-                            if let Some(last_touch) = last_touch {
-                                pen = [
-                                    touch.location.x as f32 / screen_size.0,
-                                    touch.location.y as f32 / screen_size.1,
-                                    (touch.location.x as f32 - last_touch.0) / screen_size.0,
-                                    (touch.location.y as f32 - last_touch.1) / screen_size.1,
-                                ];
+                            let x = touch.location.x as f32 / screen_size.0;
+                            let y = touch.location.y as f32 / screen_size.1;
+
+                            if let Some([last_x, last_y, ..]) = fingors.get(&touch.id) {
+                                let pen = [x, y, (x - last_x), (y - last_y)];
+                                fingors.insert(touch.id, pen);
+                            } else {
+                                fingors.insert(touch.id, [x, y, 0., 0.]);
                             }
-                            last_touch = Some((touch.location.x as f32, touch.location.y as f32));
+                        }
+                        TouchPhase::Ended => {
+                            fingors.remove(&touch.id);
+                            dbg!(&fingors);
                         }
                         _ => (),
                     },

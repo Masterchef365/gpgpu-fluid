@@ -3,7 +3,8 @@ layout (local_size_x = 32, local_size_y = 32) in;
 
 uniform layout(binding=0, r32f) restrict image2D read_u;
 uniform layout(binding=1, r32f) restrict image2D read_v;
-uniform layout(location=1) vec4 pen;
+const uint MAX_FINGIES = 5;
+uniform layout(location=1) vec4 pens[MAX_FINGIES];
 uniform vec2 screen_size;
 
 const float PEN_RADIUS = 20.;
@@ -17,12 +18,14 @@ void main() {
         imageLoad(read_v, xy).x
     );
 
-    vec2 pen_pos = (vec2(0., 1.) - pen.xy) * tex_size * vec2(-1, 1);
-    pen_pos.x /= min(screen_size.x, screen_size.y)/screen_size.x;
-    vec2 pen_vel = pen.zw * tex_size * vec2(1, -1);
-    float pen_dist = distance(xy, pen_pos);
-    //vel += float(length(pen_pos) < PEN_RADIUS) * pen.zw;
-    vel += float(pen_dist < PEN_RADIUS) * pen_vel * 2.;
+    for (int i = 0; i < MAX_FINGIES; i++) {
+        vec2 pen_pos = (vec2(0., 1.) - pens[i].xy) * tex_size * vec2(-1, 1);
+        pen_pos.x /= min(screen_size.x, screen_size.y)/screen_size.x;
+        vec2 pen_vel = pens[i].zw * tex_size * vec2(1, -1);
+        float pen_dist = distance(xy, pen_pos);
+        //vel += float(length(pen_pos) < PEN_RADIUS) * pen.zw;
+        vel += float(pen_dist < PEN_RADIUS) * pen_vel * 2.;
+    }
 
     // Write semi-lagrangian calc
     imageStore(read_u, xy, vec4(vel.x, 0,0,0));
