@@ -6,9 +6,9 @@ use glutin::event_loop::ControlFlow;
 
 const N_PARTICLES: i32 = 400_000;
 const LOCAL_SIZE: i32 = 32;
-const WIDTH: i32 = 16 * LOCAL_SIZE;
-const HEIGHT: i32 = 16 * LOCAL_SIZE;
-const N_ITERS: u32 = 40;
+const WIDTH: i32 = 16 * LOCAL_SIZE+1;
+const HEIGHT: i32 = 16 * LOCAL_SIZE+1;
+const N_ITERS: u32 = 30;
 
 fn main() -> Result<()> {
     unsafe {
@@ -80,9 +80,9 @@ fn main() -> Result<()> {
             );
             gl.texture_parameter_i32(tex, gl::TEXTURE_MIN_FILTER, gl::LINEAR as _);
             gl.texture_parameter_i32(tex, gl::TEXTURE_MAG_FILTER, gl::LINEAR as _);
-            gl.texture_parameter_i32(tex, gl::TEXTURE_WRAP_S, gl::MIRRORED_REPEAT as _);
-            gl.texture_parameter_i32(tex, gl::TEXTURE_WRAP_T, gl::MIRRORED_REPEAT as _);
-            //gl.tex_parameter_f32_slice(gl::TEXTURE_2D, gl::TEXTURE_BORDER_COLOR, &[0.0; 4]);
+            gl.texture_parameter_i32(tex, gl::TEXTURE_WRAP_S, gl::REPEAT as _);
+            gl.texture_parameter_i32(tex, gl::TEXTURE_WRAP_T, gl::REPEAT  as _);
+            gl.tex_parameter_f32_slice(gl::TEXTURE_2D, gl::TEXTURE_BORDER_COLOR, &[0.0; 4]);
             Ok(tex)
         };
 

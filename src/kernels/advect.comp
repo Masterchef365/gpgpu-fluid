@@ -8,7 +8,8 @@ uniform layout(binding=3, r32f) restrict image2D write_v;
 uniform layout(location=0) float dt;
 
 float bilinear(sampler2D img, vec2 pt) {
-    return texture(img, fract(pt / imageSize(write_u))).x;
+    vec2 size = imageSize(write_u);
+    return texture(img, pt / size).x;
 }
 
 void main() {
