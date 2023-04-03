@@ -6,7 +6,7 @@ use gl::HasContext;
 use glutin::event::{Event, TouchPhase, WindowEvent, VirtualKeyCode};
 use glutin::event_loop::ControlFlow;
 
-const N_PARTICLES: i32 = 500_000;
+const N_PARTICLES: i32 = 150_000;
 const LOCAL_SIZE: i32 = 32;
 const WIDTH: i32 = 13 * LOCAL_SIZE;
 const HEIGHT: i32 = 8 * LOCAL_SIZE;
@@ -105,6 +105,8 @@ fn main() -> Result<()> {
 
         // Set up GL state
         gl.clear_color(0., 0., 0., 1.0);
+        gl.enable(gl::BLEND);
+        gl.blend_func(gl::SRC_ALPHA, gl::ONE);
         //gl.enable(gl::VERTEX_PROGRAM_POINT_SIZE);
 
         let mut dt = 0.;

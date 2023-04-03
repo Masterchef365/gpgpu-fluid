@@ -30,22 +30,6 @@ void main() {
 
         vec2 r = vec2(rx, ry);
 
-        if (!out_bounds) {
-            vec2 j = vec2(
-                rand(vec2(idx)),
-                rand(vec2(idx+8))
-            ) * 2. - 1.;
-
-            vec2 k = size/30.;
-            if (rand(vec2(idx)) < 0.5) {
-                r.y = floor(r.y * k.y) / k.y;
-            } else {
-                r.x = floor(r.x * k.x) / k.x;
-            }
-            r += j/750.;
-        }
-
-
         particles[idx] = r * size;
     }
 

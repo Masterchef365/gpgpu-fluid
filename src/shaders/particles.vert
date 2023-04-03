@@ -10,6 +10,7 @@ uniform vec2 screen_size;
 
 out vec2 vert;
 
+
 void main() {
     int idx = gl_VertexID / 2;
     int part = gl_VertexID % 2;
@@ -19,10 +20,11 @@ void main() {
 
     vec2 sp = vert;
     if (part == 0) {
-        float u = texture(read_u, vert + vec2(0., 0.)).x;
-        float v = texture(read_v, vert + vec2(0., 0.)).x;
+        float u = texture(read_u, vert + vec2(0., 1)/size).x;
+        float v = texture(read_v, vert + vec2(1, 0.)/size).x;
         vec2 uv = vec2(u, v);
-        sp -= uv/200.;
+
+        sp -= uv/size.x;
     }
 
     sp.x *= min(screen_size.x, screen_size.y)/screen_size.x;
