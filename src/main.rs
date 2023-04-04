@@ -41,7 +41,7 @@ fn main() -> Result<()> {
         gl.bind_buffer(gl::ARRAY_BUFFER, Some(particle_buffer));
         gl.buffer_data_size(
             gl::ARRAY_BUFFER,
-            N_PARTICLES * std::mem::size_of::<f32>() as i32 * 2,
+            N_PARTICLES * std::mem::size_of::<f32>() as i32 * 4,
             gl::DYNAMIC_DRAW,
         );
         gl.bind_vertex_array(None);
