@@ -11,13 +11,22 @@ void main() {
     float u = texture(read_u, vert.xy).x / k;
     float v = texture(read_v, vert.xy).x / k;
 
+    /*
     vec3 color = mix(
         vec3(0.1, 0.8, 0.9),
         vec3(0.8, 1., 0.1),
         length(vec2(u, v))
     );
 
-    color *= float(fract(vert.w / 10.) < 0.1);
+    color *= float(fract(vert.w / 10.) < 1./3);
+    */
+   
+    vec3 color = mix(
+        mix(vec3(1.000,0.530,0.225), vec3(0.082,0.955,0.618), vert.z),
+        vec3(1),
+        vert.w
+    );
+
 
     out_color = vec4(color, 1.);
 }
