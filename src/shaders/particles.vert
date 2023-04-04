@@ -6,12 +6,12 @@ layout(std430, binding=4) buffer Particles {
 };
 uniform vec2 screen_size;
 
-out vec2 vert;
+out vec4 vert;
 
 void main() {
     vec2 size = vec2(imageSize(write_img));
-    vert = particles[gl_VertexID].xy / size;
-    vec2 sp = vert;
+    vert = particles[gl_VertexID] / vec4(size, vec2(1));
+    vec2 sp = vert.xy;
     sp.x *= min(screen_size.x, screen_size.y)/screen_size.x;
     sp.x *= size.x/size.y;
     sp = sp * 2. - 1.;
