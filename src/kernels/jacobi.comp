@@ -11,6 +11,10 @@ void main() {
     ivec2 gid = ivec2(gl_GlobalInvocationID.xy);
     ivec2 size = imageSize(read_u);
 
+    if (any(greaterThan(gid, size))) {
+        return;
+    }
+
     // Read previous state
     ivec2 top_pos = gid;
     ivec2 bottom_pos = gid + ivec2(0, 1);
