@@ -11,7 +11,7 @@ void main() {
     ivec2 gid = ivec2(gl_GlobalInvocationID.xy);
     ivec2 size = imageSize(read_u);
 
-    if (any(greaterThan(gid, size))) {
+    if (any(greaterThan(gid, size - 1))) {
         return;
     }
 
@@ -25,6 +25,23 @@ void main() {
     float right = imageLoad(read_u, right_pos).x;
     float top = imageLoad(read_v, top_pos).x;
     float bottom = imageLoad(read_v, bottom_pos).x;
+
+    if (left_pos.x == 0) {
+        left = 0.;
+    }
+
+    if (right_pos.x == size.x - 1) {
+        right = 0.;
+    }
+
+    if (top_pos.y == 0) {
+        top = 0.;
+    }
+
+    if (bottom_pos.y == size.y - 1) {
+        bottom = 0.;
+    }
+
 
     // Enforce checkerboard pattern
     if (((gid.x % 2) ^ (gid.y % 2)) == parity) {
