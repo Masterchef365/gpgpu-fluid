@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 use anyhow::{bail, format_err, Context as AnyhowContext, Result};
 use gl::HasContext;
-use glutin::event::{Event, TouchPhase, WindowEvent, VirtualKeyCode};
+use glutin::event::{Event, TouchPhase, WindowEvent, VirtualKeyCode, MouseButton, ElementState};
 use glutin::event_loop::ControlFlow;
 
 const N_PARTICLES: i32 = 150_000;
@@ -12,6 +12,8 @@ const WIDTH: i32 = 13 * LOCAL_SIZE;
 const HEIGHT: i32 = 8 * LOCAL_SIZE;
 const N_ITERS: u32 = 40;
 const MAX_FINGIES: usize = 5;
+
+const MOUSE_IDX: u64 = 0;
 
 fn main() -> Result<()> {
     unsafe {
@@ -218,7 +220,7 @@ fn main() -> Result<()> {
                     gl.draw_arrays(gl::LINES, 0, N_PARTICLES*2);
 
                     dt = 0.1;
-                    fingors.clear();
+                    //fingors.clear();
 
                     window.swap_buffers().unwrap();
                 }
@@ -249,8 +251,8 @@ fn main() -> Result<()> {
                             let x = touch.location.x as f32 / screen_size.0;
                             let y = touch.location.y as f32 / screen_size.1;
 
-                            if let Some([last_x, last_y, ..]) = fingors.get(&touch.id) {
-                                let pen = [x, y, (x - last_x), (y - last_y)];
+                            if let Some([vel_x, vel_y, ..]) = fingors.get(&touch.id) {
+                                let pen = [x, y, (x - vel_x), (y - vel_y)];
                                 fingors.insert(touch.id, pen);
                             } else {
                                 fingors.insert(touch.id, [x, y, 0., 0.]);
@@ -268,6 +270,26 @@ fn main() -> Result<()> {
                                 _ => (),
                             }
                         }
+                    }
+                    WindowEvent::CursorMoved { position, .. } => {
+                        if let Some([x, y, vel_x, vel_y]) = fingors.get_mut(&MOUSE_IDX) {
+                            let px = position.x as f32 / screen_size.0;
+                            let py = position.y as f32 / screen_size.1;
+
+                            if (*x, *y) != (0., 0.) {
+                                *vel_x = px - *x;
+                                *vel_y = py - *y;
+                            }
+
+                            *x = px;
+                            *y = py;
+                        }
+                    }
+                    WindowEvent::MouseInput { state, button: MouseButton::Left, .. } => {
+                        match state {
+                            ElementState::Pressed => fingors.insert(MOUSE_IDX, [0.; 4]),
+                            ElementState::Released => fingors.remove(&MOUSE_IDX),
+                        };
                     }
                     _ => (),
                 },
