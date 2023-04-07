@@ -12,6 +12,7 @@ const WIDTH: i32 = 13 * LOCAL_SIZE;
 const HEIGHT: i32 = 8 * LOCAL_SIZE;
 const N_ITERS: u32 = 40;
 const MAX_FINGIES: usize = 5;
+const DT: f32 = 0.1;
 
 const MOUSE_IDX: u64 = 0;
 
@@ -219,7 +220,7 @@ fn main() -> Result<()> {
                     gl.bind_vertex_array(Some(particle_vertex_array));
                     gl.draw_arrays(gl::LINES, 0, N_PARTICLES*2);
 
-                    dt = 0.1;
+                    dt = DT;
                     //fingors.clear();
 
                     window.swap_buffers().unwrap();
