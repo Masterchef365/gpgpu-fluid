@@ -14,9 +14,9 @@ void main() {
     float v = texture(read_v, vert).x / k;
 
     vec3 color = mix(
-        vec3(0.01, 0.5, 1.),
-        vec3(1., 0.1, 0.01),
-        length(vec2(u, v))
+        vec3(0.5, 1., 0.01),
+        vec3(1.),
+        pow(u*u+v*v, 1./2.)
     );
 
     color *= float(part_fg);
