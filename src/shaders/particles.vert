@@ -9,11 +9,13 @@ layout(std430, binding=4) buffer Particles {
 uniform vec2 screen_size;
 
 out vec2 vert;
+out float part_fg;
 
 
 void main() {
     int idx = gl_VertexID / 2;
     int part = gl_VertexID % 2;
+    part_fg = float(part);
 
     vec2 size = vec2(imageSize(write_img));
     vert = particles[idx] / size;
