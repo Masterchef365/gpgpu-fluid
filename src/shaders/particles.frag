@@ -5,6 +5,8 @@ uniform layout(binding=0) sampler2D read_u;
 uniform layout(binding=1) sampler2D read_v;
 
 in vec2 vert;
+in float part_fg;
+
 out vec4 out_color;
 void main() {
     const float k = 10.;
@@ -17,6 +19,8 @@ void main() {
         vec3(0.9, 0.3, 1.),
         t
     ) / 3.;
+
+    color *= float(part_fg);
 
     out_color = vec4(color, 1.);
 }
