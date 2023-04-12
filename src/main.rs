@@ -8,11 +8,12 @@ use glutin::event_loop::ControlFlow;
 
 const N_PARTICLES: i32 = 150_000;
 const LOCAL_SIZE: i32 = 32;
-const WIDTH: i32 = 13 * LOCAL_SIZE;
+const WIDTH: i32 = 14 * LOCAL_SIZE;
 const HEIGHT: i32 = 8 * LOCAL_SIZE;
-const N_ITERS: u32 = 40;
+const N_ITERS: u32 = 30;
 const MAX_FINGIES: usize = 5;
 const DT: f32 = 0.1;
+const STEPS: usize = 30;
 
 const MOUSE_IDX: u64 = 0;
 
@@ -126,101 +127,103 @@ fn main() -> Result<()> {
                     window.window().request_redraw();
                 }
                 Event::RedrawRequested(_) => {
-                    // Execute jacobi kernel
-                    gl.use_program(Some(jacobi_kernel));
-                    let parity_loc = gl.get_uniform_location(jacobi_kernel, "parity");
-                    for i in 0..N_ITERS * 2 {
-                        let parity = i % 2;
+                    gl.clear(gl::COLOR_BUFFER_BIT);
+                    for _ in 0..STEPS {
+                        // Execute jacobi kernel
+                        gl.use_program(Some(jacobi_kernel));
+                        let parity_loc = gl.get_uniform_location(jacobi_kernel, "parity");
+                        for i in 0..N_ITERS * 2 {
+                            let parity = i % 2;
 
-                        gl.uniform_1_u32(parity_loc.as_ref(), parity);
+                            gl.uniform_1_u32(parity_loc.as_ref(), parity);
+                            // Set read textures
+                            gl.bind_image_texture(0, read_u, 0, false, 0, gl::READ_WRITE, gl::R32F);
+                            gl.bind_image_texture(1, read_v, 0, false, 0, gl::READ_WRITE, gl::R32F);
+                            // Set write textures
+                            gl.bind_image_texture(2, write_u, 0, false, 0, gl::READ_WRITE, gl::R32F);
+                            gl.bind_image_texture(3, write_v, 0, false, 0, gl::READ_WRITE, gl::R32F);
+
+                            // Run kernel
+                            gl.dispatch_compute(
+                                (WIDTH / LOCAL_SIZE) as _,
+                                (HEIGHT / LOCAL_SIZE) as _,
+                                1,
+                            );
+                            // Memory barrier for vertex shader
+                            gl.memory_barrier(gl::SHADER_IMAGE_ACCESS_BARRIER_BIT);
+
+                            std::mem::swap(&mut read_u, &mut write_u);
+                            std::mem::swap(&mut read_v, &mut write_v);
+                        }
+
+                        // Execute advection kernel
+                        gl.use_program(Some(advect_kernel));
                         // Set read textures
-                        gl.bind_image_texture(0, read_u, 0, false, 0, gl::READ_WRITE, gl::R32F);
-                        gl.bind_image_texture(1, read_v, 0, false, 0, gl::READ_WRITE, gl::R32F);
+                        gl.active_texture(gl::TEXTURE0);
+                        gl.bind_texture(gl::TEXTURE_2D, Some(read_u));
+                        gl.active_texture(gl::TEXTURE1);
+                        gl.bind_texture(gl::TEXTURE_2D, Some(read_v));
                         // Set write textures
                         gl.bind_image_texture(2, write_u, 0, false, 0, gl::READ_WRITE, gl::R32F);
                         gl.bind_image_texture(3, write_v, 0, false, 0, gl::READ_WRITE, gl::R32F);
-
-                        // Run kernel
-                        gl.dispatch_compute(
-                            (WIDTH / LOCAL_SIZE) as _,
-                            (HEIGHT / LOCAL_SIZE) as _,
-                            1,
-                        );
+                        // Set dt
+                        let dt_loc = gl.get_uniform_location(advect_kernel, "dt");
+                        gl.uniform_1_f32(dt_loc.as_ref(), dt);
+                        gl.dispatch_compute((WIDTH / LOCAL_SIZE) as _, (HEIGHT / LOCAL_SIZE) as _, 1);
                         // Memory barrier for vertex shader
                         gl.memory_barrier(gl::SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
                         std::mem::swap(&mut read_u, &mut write_u);
                         std::mem::swap(&mut read_v, &mut write_v);
+
+                        // Execute touch/mouse drawing kernel
+                        gl.use_program(Some(draw_kernel));
+                        // Set read textures
+                        gl.bind_image_texture(0, read_u, 0, false, 0, gl::READ_WRITE, gl::R32F);
+                        gl.bind_image_texture(1, read_v, 0, false, 0, gl::READ_WRITE, gl::R32F);
+                        // Set pens
+                        let mut pen_keys: Vec<u64> = fingors.keys().copied().collect();
+                        pen_keys.sort();
+                        let mut pens: Vec<f32> = pen_keys.iter().map(|id| fingors[id]).flatten().collect();
+                        pens.resize(4*MAX_FINGIES, 0.);
+                        let pen_loc = gl.get_uniform_location(draw_kernel, "pens");
+                        gl.uniform_4_f32_slice(pen_loc.as_ref(), &pens);
+                        // Set screen size
+                        let screen_size_loc = gl.get_uniform_location(draw_kernel, "screen_size");
+                        let (sx, sy) = screen_size;
+                        gl.uniform_2_f32(screen_size_loc.as_ref(), sx, sy);
+                        gl.dispatch_compute((WIDTH / LOCAL_SIZE) as _, (HEIGHT / LOCAL_SIZE) as _, 1);
+
+                        // Execute particle kernel
+                        gl.use_program(Some(particle_kernel));
+                        // Set read textures
+                        gl.active_texture(gl::TEXTURE0);
+                        gl.bind_texture(gl::TEXTURE_2D, Some(read_u));
+                        gl.active_texture(gl::TEXTURE1);
+                        gl.bind_texture(gl::TEXTURE_2D, Some(read_v));
+                        // Set write textures
+                        gl.bind_image_texture(2, write_u, 0, false, 0, gl::READ_WRITE, gl::R32F);
+                        gl.bind_image_texture(3, write_v, 0, false, 0, gl::READ_WRITE, gl::R32F);
+                        // Set particle buffer
+                        gl.bind_buffer_base(gl::SHADER_STORAGE_BUFFER, 4, Some(particle_buffer));
+                        // Set dt
+                        let dt_loc = gl.get_uniform_location(particle_kernel, "dt");
+                        gl.uniform_1_f32(dt_loc.as_ref(), dt);
+                        // Dispatch
+                        gl.dispatch_compute(N_PARTICLES as u32, 1, 1);
+                        // Memory barrier for vertex shader
+                        gl.memory_barrier(gl::SHADER_IMAGE_ACCESS_BARRIER_BIT);
+
+                        // Draw particles
+                        gl.use_program(Some(particle_shader));
+                        let screen_size_loc = gl.get_uniform_location(particle_shader, "screen_size");
+                        let (sx, sy) = screen_size;
+                        gl.uniform_2_f32(screen_size_loc.as_ref(), sx, sy);
+                        gl.bind_vertex_array(Some(particle_vertex_array));
+                        gl.draw_arrays(gl::LINES, 0, N_PARTICLES*2);
+
+                        dt = DT;
                     }
-
-                    // Execute advection kernel
-                    gl.use_program(Some(advect_kernel));
-                    // Set read textures
-                    gl.active_texture(gl::TEXTURE0);
-                    gl.bind_texture(gl::TEXTURE_2D, Some(read_u));
-                    gl.active_texture(gl::TEXTURE1);
-                    gl.bind_texture(gl::TEXTURE_2D, Some(read_v));
-                    // Set write textures
-                    gl.bind_image_texture(2, write_u, 0, false, 0, gl::READ_WRITE, gl::R32F);
-                    gl.bind_image_texture(3, write_v, 0, false, 0, gl::READ_WRITE, gl::R32F);
-                    // Set dt
-                    let dt_loc = gl.get_uniform_location(advect_kernel, "dt");
-                    gl.uniform_1_f32(dt_loc.as_ref(), dt);
-                    gl.dispatch_compute((WIDTH / LOCAL_SIZE) as _, (HEIGHT / LOCAL_SIZE) as _, 1);
-                    // Memory barrier for vertex shader
-                    gl.memory_barrier(gl::SHADER_IMAGE_ACCESS_BARRIER_BIT);
-
-                    std::mem::swap(&mut read_u, &mut write_u);
-                    std::mem::swap(&mut read_v, &mut write_v);
-
-                    // Execute touch/mouse drawing kernel
-                    gl.use_program(Some(draw_kernel));
-                    // Set read textures
-                    gl.bind_image_texture(0, read_u, 0, false, 0, gl::READ_WRITE, gl::R32F);
-                    gl.bind_image_texture(1, read_v, 0, false, 0, gl::READ_WRITE, gl::R32F);
-                    // Set pens
-                    let mut pen_keys: Vec<u64> = fingors.keys().copied().collect();
-                    pen_keys.sort();
-                    let mut pens: Vec<f32> = pen_keys.iter().map(|id| fingors[id]).flatten().collect();
-                    pens.resize(4*MAX_FINGIES, 0.);
-                    let pen_loc = gl.get_uniform_location(draw_kernel, "pens");
-                    gl.uniform_4_f32_slice(pen_loc.as_ref(), &pens);
-                    // Set screen size
-                    let screen_size_loc = gl.get_uniform_location(draw_kernel, "screen_size");
-                    let (sx, sy) = screen_size;
-                    gl.uniform_2_f32(screen_size_loc.as_ref(), sx, sy);
-                    gl.dispatch_compute((WIDTH / LOCAL_SIZE) as _, (HEIGHT / LOCAL_SIZE) as _, 1);
-
-                    // Execute particle kernel
-                    gl.use_program(Some(particle_kernel));
-                    // Set read textures
-                    gl.active_texture(gl::TEXTURE0);
-                    gl.bind_texture(gl::TEXTURE_2D, Some(read_u));
-                    gl.active_texture(gl::TEXTURE1);
-                    gl.bind_texture(gl::TEXTURE_2D, Some(read_v));
-                    // Set write textures
-                    gl.bind_image_texture(2, write_u, 0, false, 0, gl::READ_WRITE, gl::R32F);
-                    gl.bind_image_texture(3, write_v, 0, false, 0, gl::READ_WRITE, gl::R32F);
-                    // Set particle buffer
-                    gl.bind_buffer_base(gl::SHADER_STORAGE_BUFFER, 4, Some(particle_buffer));
-                    // Set dt
-                    let dt_loc = gl.get_uniform_location(particle_kernel, "dt");
-                    gl.uniform_1_f32(dt_loc.as_ref(), dt);
-                    // Dispatch
-                    gl.dispatch_compute(N_PARTICLES as u32, 1, 1);
-                    // Memory barrier for vertex shader
-                    gl.memory_barrier(gl::SHADER_IMAGE_ACCESS_BARRIER_BIT);
-
-                    // Draw particles
-                    gl.clear(gl::COLOR_BUFFER_BIT);
-                    gl.use_program(Some(particle_shader));
-                    let screen_size_loc = gl.get_uniform_location(particle_shader, "screen_size");
-                    let (sx, sy) = screen_size;
-                    gl.uniform_2_f32(screen_size_loc.as_ref(), sx, sy);
-                    gl.bind_vertex_array(Some(particle_vertex_array));
-                    gl.draw_arrays(gl::LINES, 0, N_PARTICLES*2);
-
-                    dt = DT;
                     //fingors.clear();
 
                     window.swap_buffers().unwrap();
