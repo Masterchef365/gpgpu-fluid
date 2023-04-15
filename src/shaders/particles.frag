@@ -11,11 +11,12 @@ void main() {
     float u = texture(read_u, vert).x / k;
     float v = texture(read_v, vert).x / k;
 
+    float t = clamp(length(vec2(u, v)) * 1.5, 0.3, 3.5);
     vec3 color = mix(
-        vec3(0.01, 0.5, 1.),
-        vec3(1., 0.1, 0.01),
-        length(vec2(u, v))
-    ).bgr / 4.;
+        vec3(1., 0.5, 0.01),
+        vec3(0.9, 0.3, 1.),
+        t
+    ) / 3.;
 
     out_color = vec4(color, 1.);
 }
