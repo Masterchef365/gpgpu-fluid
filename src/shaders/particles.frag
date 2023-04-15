@@ -15,7 +15,7 @@ void main() {
         vec3(0.01, 0.5, 1.),
         vec3(1., 0.1, 0.01),
         length(vec2(u, v))
-    );
+    ).bgr / 4.;
 
     out_color = vec4(color, 1.);
 }
