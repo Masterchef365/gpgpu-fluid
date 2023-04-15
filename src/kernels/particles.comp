@@ -28,11 +28,15 @@ void main() {
         float rx = rand(last_state + vec2(2344., idx) / 1000);
         float ry = rand(last_state + vec2(1244., idx) / 1000);
 
-        float k = 50.;
-        vec2 r = vec2(floor(ry * k) / k, rx);
-        r.x = fract(r.x + r.y);
+        float k = 5.;
+        vec2 r = vec2(rx, ry) * 2. - 1.;
+        float l = length(r);
+        r = normalize(r) * floor(l * k) / k;
 
-        particles[idx] = r * size;
+        r.x *= size.y/size.x;
+        r = size * (r + 1.) / 2.;
+
+        particles[idx] = r;
     }
 
     vec2 uv = particles[idx] / imageSize(write_img);
