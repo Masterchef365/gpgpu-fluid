@@ -28,7 +28,9 @@ void main() {
         float rx = rand(last_state + vec2(2344., idx) / 1000);
         float ry = rand(last_state + vec2(1244., idx) / 1000);
 
-        vec2 r = vec2(rx, ry);
+        vec2 r = vec2(rx, ry) * 2. - 1.;
+        r *= 0.01;
+        r += 0.5;
 
         particles[idx] = r * size;
     }

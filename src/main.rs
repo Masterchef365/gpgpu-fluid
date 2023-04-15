@@ -6,7 +6,7 @@ use gl::HasContext;
 use glutin::event::{Event, TouchPhase, WindowEvent, VirtualKeyCode, MouseButton, ElementState};
 use glutin::event_loop::ControlFlow;
 
-const N_PARTICLES: i32 = 150_000;
+const N_PARTICLES: i32 = 1_000_000;
 const LOCAL_SIZE: i32 = 32;
 const WIDTH: i32 = 13 * LOCAL_SIZE;
 const HEIGHT: i32 = 8 * LOCAL_SIZE;
@@ -218,7 +218,7 @@ fn main() -> Result<()> {
                     let (sx, sy) = screen_size;
                     gl.uniform_2_f32(screen_size_loc.as_ref(), sx, sy);
                     gl.bind_vertex_array(Some(particle_vertex_array));
-                    gl.draw_arrays(gl::LINES, 0, N_PARTICLES*2);
+                    gl.draw_arrays(gl::POINTS, 0, N_PARTICLES*2);
 
                     dt = DT;
                     //fingors.clear();
