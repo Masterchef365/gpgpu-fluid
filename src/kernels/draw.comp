@@ -26,7 +26,7 @@ void main() {
         float pen_dist = distance(xy, pen_pos);
         //vel += float(length(pen_pos) < PEN_RADIUS) * pen.zw;
         if (pen_dist < PEN_RADIUS) {
-            vel += pen_vel * 1.;
+            vel = pen_vel * 4.;
         }
     }
 
