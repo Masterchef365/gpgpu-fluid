@@ -29,7 +29,8 @@ void main() {
         float ry = rand(last_state + vec2(1244., idx) / 1000);
 
         float t = rx * 2. * 3.141592;
-        float k = 0.5 + ry / 100.;
+        float k = 0.5 + floor(ry * 10.) / 50.;
+        k += ry / 100.;
         vec2 r = vec2(cos(t), sin(t)) * k;
 
         r.x *= size.y/size.x;
