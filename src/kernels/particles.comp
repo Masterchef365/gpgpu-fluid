@@ -25,18 +25,10 @@ void main() {
         || last_state.y > size.y;
 
     if (do_reset || out_bounds) {
-        float rx = rand(last_state + vec2(2344., idx) / 1000);
-        float ry = rand(last_state + vec2(1244., idx) / 1000);
+        float t = float(idx)/float(particles.length());
+        vec2 r = vec2(cos(t), sin(t)) * 0.1;
 
-        float t = rx * 2. * 3.141592;
-        float k = 0.5 + floor(ry * 10.) / 50.;
-        k += ry / 100.;
-        vec2 r = vec2(cos(t), sin(t)) * k;
-
-        r.x *= size.y/size.x;
-        r = size * (r + 1.) / 2.;
-
-        particles[idx] = r;
+        particles[idx] = size * (r + 1. / 2.);
     }
 
     vec2 uv = particles[idx] / imageSize(write_img);
