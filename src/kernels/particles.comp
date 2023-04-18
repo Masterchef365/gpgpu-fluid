@@ -20,7 +20,7 @@ float rand(vec2 co){
 }
 
 void main() {
-    uint idx = gl_GlobalInvocationID.x;
+    int idx = int(gl_GlobalInvocationID.x);
     vec2 last_state = particles[idx];
 
     bool do_reset = dt == 0.;
@@ -30,9 +30,10 @@ void main() {
         || last_state.x > size.x 
         || last_state.y > size.y;
 
+    const float RADIUS = 0.3; 
     if (do_reset) {
         float t = TAU * float(idx) / float(particles.length());
-        vec2 r = vec2(cos(t), sin(t)) * 0.1;
+        vec2 r = vec2(cos(t), sin(t)) * RADIUS;
 
         particles[idx] = size * (r + 1. / 2.);
     }
@@ -44,5 +45,16 @@ void main() {
 
     vec2 flow_update = vel * dt;
 
-    particles_write[idx] = particles[idx] + flow_update;
+    vec2 pos_update = vec2(0);
+    float wanted_displacement = TAU*RADIUS/float(particles.length());
+    if (idx > 0 && idx < particles.length() - 1) {
+        vec2 l1 = particles[(idx - 1) % particles.length()] - particles[idx];
+        vec2 l2 = particles[(idx + 1) % particles.length()] - particles[idx];
+        vec2 n1 = normalize(l1);
+        vec2 n2 = normalize(l2);
+        pos_update += n1 * (length(l1) - wanted_displacement);
+        pos_update += n2 * (length(l2) - wanted_displacement);
+    }
+
+    particles_write[idx] = particles[idx] + flow_update + pos_update * 0.5;
 }
