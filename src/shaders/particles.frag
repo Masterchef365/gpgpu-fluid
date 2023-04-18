@@ -16,7 +16,7 @@ void main() {
         vec3(1., 0.5, 0.01),
         vec3(0.9, 0.3, 1.),
         t
-    ) / 3.;
+    );
 
     out_color = vec4(color, 1.);
 }
