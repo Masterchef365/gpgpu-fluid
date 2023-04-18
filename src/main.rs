@@ -34,13 +34,13 @@ fn main() -> Result<()> {
         let mut screen_size = (1024., 768.);
 
         // Particle vertex array
-        let particle_vertex_array = gl
+        let mut particle_vertex_array = gl
             .create_vertex_array()
             .expect("Cannot create vertex array");
         gl.bind_vertex_array(Some(particle_vertex_array));
 
         // Particle buffer
-        let particle_buffer = gl.create_buffer().map_err(|e| format_err!("{}", e))?;
+        let mut particle_buffer = gl.create_buffer().map_err(|e| format_err!("{}", e))?;
         gl.bind_buffer(gl::ARRAY_BUFFER, Some(particle_buffer));
         gl.buffer_data_size(
             gl::ARRAY_BUFFER,
@@ -48,6 +48,22 @@ fn main() -> Result<()> {
             gl::DYNAMIC_DRAW,
         );
         gl.bind_vertex_array(None);
+
+        // Particle tmp write buffer
+        let mut particle_write_vertex_array = gl
+            .create_vertex_array()
+            .expect("Cannot create vertex array");
+        gl.bind_vertex_array(Some(particle_write_vertex_array));
+
+        let mut particle_write_buffer = gl.create_buffer().map_err(|e| format_err!("{}", e))?;
+        gl.bind_buffer(gl::ARRAY_BUFFER, Some(particle_write_buffer));
+        gl.buffer_data_size(
+            gl::ARRAY_BUFFER,
+            N_PARTICLES * std::mem::size_of::<f32>() as i32 * 2,
+            gl::DYNAMIC_DRAW,
+        );
+        gl.bind_vertex_array(None);
+
 
         // Set up fragment/vertex shaders
         let shader_sources = [
@@ -203,6 +219,7 @@ fn main() -> Result<()> {
                     gl.bind_image_texture(3, write_v, 0, false, 0, gl::READ_WRITE, gl::R32F);
                     // Set particle buffer
                     gl.bind_buffer_base(gl::SHADER_STORAGE_BUFFER, 4, Some(particle_buffer));
+                    gl.bind_buffer_base(gl::SHADER_STORAGE_BUFFER, 5, Some(particle_write_buffer));
                     // Set dt
                     let dt_loc = gl.get_uniform_location(particle_kernel, "dt");
                     gl.uniform_1_f32(dt_loc.as_ref(), dt);
@@ -210,6 +227,10 @@ fn main() -> Result<()> {
                     gl.dispatch_compute(N_PARTICLES as u32, 1, 1);
                     // Memory barrier for vertex shader
                     gl.memory_barrier(gl::SHADER_IMAGE_ACCESS_BARRIER_BIT);
+
+                    std::mem::swap(&mut particle_buffer, &mut particle_write_buffer);
+                    std::mem::swap(&mut particle_vertex_array, &mut particle_write_vertex_array);
+                    gl.bind_buffer_base(gl::SHADER_STORAGE_BUFFER, 4, Some(particle_buffer));
 
                     // Draw particles
                     gl.clear(gl::COLOR_BUFFER_BIT);

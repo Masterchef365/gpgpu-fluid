@@ -7,7 +7,13 @@ uniform layout(binding=2, r32f) image2D write_img;
 layout(std430, binding=4) buffer Particles {
     vec2 particles[];
 };
+layout(std430, binding=5) buffer ParticlesWrite {
+    vec2 particles_write[];
+};
 uniform layout(location=0) float dt;
+
+const float PI = 3.141592;
+const float TAU = 2. * PI;
 
 float rand(vec2 co){
     return fract(sin(dot(co, vec2(12.9898, 78.233))) * 437.5453);
@@ -24,8 +30,8 @@ void main() {
         || last_state.x > size.x 
         || last_state.y > size.y;
 
-    if (do_reset || out_bounds) {
-        float t = float(idx)/float(particles.length());
+    if (do_reset) {
+        float t = TAU * float(idx) / float(particles.length());
         vec2 r = vec2(cos(t), sin(t)) * 0.1;
 
         particles[idx] = size * (r + 1. / 2.);
@@ -36,5 +42,7 @@ void main() {
     float vel_v = texture(read_v, uv).x;
     vec2 vel = vec2(vel_u, vel_v);
 
-    particles[idx] += vel * dt;
+    vec2 flow_update = vel * dt;
+
+    particles_write[idx] = particles[idx] + flow_update;
 }
