@@ -42,6 +42,10 @@ void main() {
         bottom = 0.;
     }
 
+    vec2 uv = (vec2(gid)/vec2(size)) * 2. - 1.;
+    if (length(uv) < 0.3) {
+        top = left = right = bottom = 0.;
+    }
 
     // Enforce checkerboard pattern
     if (((gid.x % 2) ^ (gid.y % 2)) == parity) {
