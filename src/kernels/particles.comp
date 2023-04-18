@@ -56,5 +56,5 @@ void main() {
         pos_update += n2 * (length(l2) - wanted_displacement);
     }
 
-    particles_write[idx] = particles[idx] + flow_update + pos_update * 0.3;
+    particles_write[idx] = particles[idx] + flow_update + pos_update * 0.49;
 }
