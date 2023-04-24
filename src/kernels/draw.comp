@@ -23,10 +23,13 @@ void main() {
         pen_pos.x /= size.x/size.y;
         pen_pos.x /= min(screen_size.x, screen_size.y)/screen_size.x;
         vec2 pen_vel = pens[i].zw * size * vec2(1, -1);
+
         float pen_dist = distance(xy, pen_pos);
         //vel += float(length(pen_pos) < PEN_RADIUS) * pen.zw;
         if (pen_dist < PEN_RADIUS) {
-            vel = pen_vel * 4.;
+            vec2 pen_offset = pen_pos - xy;
+            if (pen_vel != vec2(0))
+                vel = dot(pen_offset, pen_vel) * normalize(pen_vel);
         }
     }
 
