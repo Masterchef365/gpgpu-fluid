@@ -27,6 +27,7 @@ void main() {
     float top = imageLoad(read_v, top_pos).x;
     float bottom = imageLoad(read_v, bottom_pos).x;
 
+    /*
     if (left_pos.x == 0) {
         left = 0.;
     }
@@ -42,9 +43,10 @@ void main() {
     if (bottom_pos.y == size.y - 1) {
         bottom = 0.;
     }
+    */
 
     vec4 set = imageLoad(boundaries, top_pos);
-    vec2 induced = (vec2(set.xy) - (128./255.)) / 3000.;
+    vec2 induced = (vec2(set.xy) - (128./255.));
     float amnt = set.a;
     top = mix(top, induced.y, amnt);
     bottom = mix(bottom, induced.y, amnt);
