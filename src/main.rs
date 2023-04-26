@@ -119,7 +119,7 @@ fn main() -> Result<()> {
         assert_eq!(info.width, WIDTH as u32);
         assert_eq!(info.height, HEIGHT as u32);
 
-        let background = texture(gl::RGB as _, gl::RGBA, gl::UNSIGNED_BYTE, Some(&image_data))?;
+        let background = texture(gl::RGBA8 as _, gl::RGBA, gl::UNSIGNED_BYTE, Some(&image_data))?;
 
         // Set up GL state
         gl.clear_color(0., 0., 0., 1.0);
