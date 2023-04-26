@@ -43,7 +43,7 @@ void main() {
         bottom = 0.;
     }
 
-    if (imageLoad(boundaries, top_pos).r == 0) {
+    if (imageLoad(boundaries, top_pos).g == 0) {
         top = 0.;
         right = 0.;
     }
