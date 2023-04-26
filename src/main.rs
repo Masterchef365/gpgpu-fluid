@@ -109,7 +109,8 @@ fn main() -> Result<()> {
         let mut write_v = texture(gl::R32F as _, gl::RED, gl::FLOAT, None)?;
 
         // Set up background texture
-        let decoder = png::Decoder::new(File::open("background.png").unwrap());
+        let background_arg = std::env::args().skip(1).next().expect("Requires background pic");
+        let decoder = png::Decoder::new(File::open(background_arg).unwrap());
         let mut reader = decoder.read_info().unwrap();
         let mut buf = vec![0; reader.output_buffer_size()];
         let info = reader.next_frame(&mut buf).unwrap();
