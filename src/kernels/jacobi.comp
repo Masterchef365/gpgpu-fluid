@@ -43,10 +43,13 @@ void main() {
         bottom = 0.;
     }
 
-    if (imageLoad(boundaries, top_pos).g == 0) {
-        top = 0.;
-        right = 0.;
-    }
+    vec4 set = imageLoad(boundaries, top_pos);
+    vec2 induced = (vec2(set.xy) - (128./255.)) / 3000.;
+    float amnt = set.a;
+    top = mix(top, induced.y, amnt);
+    bottom = mix(bottom, induced.y, amnt);
+    left = mix(left, induced.x, amnt);
+    right = mix(right, induced.x, amnt);
 
     // Enforce checkerboard pattern
     if (((gid.x % 2) ^ (gid.y % 2)) == parity) {
