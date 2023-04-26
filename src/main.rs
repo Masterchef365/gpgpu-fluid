@@ -1,10 +1,12 @@
 extern crate glow as gl;
 use std::collections::HashMap;
+use std::fs::File;
 
 use anyhow::{bail, format_err, Context as AnyhowContext, Result};
 use gl::HasContext;
 use glutin::event::{Event, TouchPhase, WindowEvent, VirtualKeyCode, MouseButton, ElementState};
 use glutin::event_loop::ControlFlow;
+use png::{ColorType, BitDepth};
 
 const N_PARTICLES: i32 = 150_000;
 const LOCAL_SIZE: i32 = 32;
@@ -78,19 +80,19 @@ fn main() -> Result<()> {
         .unwrap();
 
         // Set up textures
-        let texture = || -> Result<gl::NativeTexture> {
+        let texture = |internal_format, format, pixels| -> Result<gl::NativeTexture> {
             let tex = gl.create_texture().map_err(|e| format_err!("{}", e))?;
             gl.bind_texture(gl::TEXTURE_2D, Some(tex));
             gl.tex_image_2d(
                 gl::TEXTURE_2D,
                 0,
-                gl::R32F as _,
+                internal_format,
                 WIDTH,
                 HEIGHT,
                 0,
                 gl::RED,
-                gl::FLOAT,
-                None,
+                format,
+                pixels,
             );
             gl.texture_parameter_i32(tex, gl::TEXTURE_MIN_FILTER, gl::LINEAR as _);
             gl.texture_parameter_i32(tex, gl::TEXTURE_MAG_FILTER, gl::LINEAR as _);
@@ -100,11 +102,24 @@ fn main() -> Result<()> {
             Ok(tex)
         };
 
-        let mut read_u = texture()?;
-        let mut write_u = texture()?;
+        let mut read_u = texture(gl::R32F as _, gl::FLOAT, None)?;
+        let mut write_u = texture(gl::R32F as _, gl::FLOAT, None)?;
 
-        let mut read_v = texture()?;
-        let mut write_v = texture()?;
+        let mut read_v = texture(gl::R32F as _, gl::FLOAT, None)?;
+        let mut write_v = texture(gl::R32F as _, gl::FLOAT, None)?;
+
+        // Set up background texture
+        let decoder = png::Decoder::new(File::open("background.png").unwrap());
+        let mut reader = decoder.read_info().unwrap();
+        let mut buf = vec![0; reader.output_buffer_size()];
+        let info = reader.next_frame(&mut buf).unwrap();
+        assert_eq!(info.bit_depth, BitDepth::Eight);
+        assert_eq!(info.color_type, ColorType::Rgb);
+        let image_data = &buf[..info.buffer_size()];
+        assert_eq!(info.width, WIDTH as u32);
+        assert_eq!(info.height, HEIGHT as u32);
+
+        let background_v = texture(gl::RGB8 as _, gl::UNSIGNED_INT, Some(&image_data))?;
 
         // Set up GL state
         gl.clear_color(0., 0., 0., 1.0);
