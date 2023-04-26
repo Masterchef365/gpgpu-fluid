@@ -5,6 +5,7 @@ uniform layout(binding=0, r32f) restrict image2D read_u;
 uniform layout(binding=1, r32f) restrict image2D read_v;
 uniform layout(binding=2, r32f) restrict image2D write_u;
 uniform layout(binding=3, r32f) restrict image2D write_v;
+uniform layout(binding=4, rgba8) restrict image2D boundaries;
 uniform layout(location=0) uint parity;
 
 void main() {
@@ -42,6 +43,10 @@ void main() {
         bottom = 0.;
     }
 
+    if (imageLoad(boundaries, top_pos).r == 0) {
+        top = 0.;
+        right = 0.;
+    }
 
     // Enforce checkerboard pattern
     if (((gid.x % 2) ^ (gid.y % 2)) == parity) {

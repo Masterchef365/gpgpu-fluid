@@ -80,7 +80,7 @@ fn main() -> Result<()> {
         .unwrap();
 
         // Set up textures
-        let texture = |internal_format, format, pixels| -> Result<gl::NativeTexture> {
+        let texture = |internal_format, format, ty, pixels| -> Result<gl::NativeTexture> {
             let tex = gl.create_texture().map_err(|e| format_err!("{}", e))?;
             gl.bind_texture(gl::TEXTURE_2D, Some(tex));
             gl.tex_image_2d(
@@ -90,8 +90,8 @@ fn main() -> Result<()> {
                 WIDTH,
                 HEIGHT,
                 0,
-                gl::RED,
                 format,
+                ty,
                 pixels,
             );
             gl.texture_parameter_i32(tex, gl::TEXTURE_MIN_FILTER, gl::LINEAR as _);
@@ -102,11 +102,11 @@ fn main() -> Result<()> {
             Ok(tex)
         };
 
-        let mut read_u = texture(gl::R32F as _, gl::FLOAT, None)?;
-        let mut write_u = texture(gl::R32F as _, gl::FLOAT, None)?;
+        let mut read_u = texture(gl::R32F as _, gl::RED, gl::FLOAT, None)?;
+        let mut write_u = texture(gl::R32F as _, gl::RED, gl::FLOAT, None)?;
 
-        let mut read_v = texture(gl::R32F as _, gl::FLOAT, None)?;
-        let mut write_v = texture(gl::R32F as _, gl::FLOAT, None)?;
+        let mut read_v = texture(gl::R32F as _, gl::RED, gl::FLOAT, None)?;
+        let mut write_v = texture(gl::R32F as _, gl::RED, gl::FLOAT, None)?;
 
         // Set up background texture
         let decoder = png::Decoder::new(File::open("background.png").unwrap());
@@ -114,12 +114,12 @@ fn main() -> Result<()> {
         let mut buf = vec![0; reader.output_buffer_size()];
         let info = reader.next_frame(&mut buf).unwrap();
         assert_eq!(info.bit_depth, BitDepth::Eight);
-        assert_eq!(info.color_type, ColorType::Rgb);
+        assert_eq!(info.color_type, ColorType::Rgba);
         let image_data = &buf[..info.buffer_size()];
         assert_eq!(info.width, WIDTH as u32);
         assert_eq!(info.height, HEIGHT as u32);
 
-        let background_v = texture(gl::RGB8 as _, gl::UNSIGNED_INT, Some(&image_data))?;
+        let background = texture(gl::RGB as _, gl::RGBA, gl::UNSIGNED_BYTE, Some(&image_data))?;
 
         // Set up GL state
         gl.clear_color(0., 0., 0., 1.0);
@@ -141,6 +141,7 @@ fn main() -> Result<()> {
                     window.window().request_redraw();
                 }
                 Event::RedrawRequested(_) => {
+                    gl.bind_image_texture(4, background, 0, false, 0, gl::READ_ONLY, gl::RGBA8);
                     // Execute jacobi kernel
                     gl.use_program(Some(jacobi_kernel));
                     let parity_loc = gl.get_uniform_location(jacobi_kernel, "parity");
