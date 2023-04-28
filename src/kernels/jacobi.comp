@@ -27,13 +27,16 @@ void main() {
     float top = imageLoad(read_v, top_pos).x;
     float bottom = imageLoad(read_v, bottom_pos).x;
 
+    // Decode image info
     vec4 set = imageLoad(boundaries, top_pos);
-    vec2 induced = (vec2(set.xy) - (128./255.));
+    vec2 induced_flow = (vec2(set.rg) - (128./255.));
+    float forced_divergence = set.b - (128./255.);
     float amnt = set.a;
-    top = mix(top, induced.y, amnt);
-    //bottom = mix(bottom, induced.y, amnt);
-    left = mix(left, induced.x, amnt);
-    //right = mix(right, induced.x, amnt);
+
+    top = mix(top, induced_flow.y, amnt);
+    //bottom = mix(bottom, induced_flow.y, amnt);
+    left = mix(left, induced_flow.x, amnt);
+    //right = mix(right, induced_flow.x, amnt);
 
     // Enforce checkerboard pattern
     if (((gid.x % 2) ^ (gid.y % 2)) == parity) {
@@ -46,6 +49,8 @@ void main() {
         // Factor must be <2. Forces convergence
         const float OVERSTEP = 1.9;
         dF *= OVERSTEP;
+
+        dF += forced_divergence * amnt;
 
         // Write next state
         imageStore(write_u, left_pos, vec4(left + dF, 0,0,0));
