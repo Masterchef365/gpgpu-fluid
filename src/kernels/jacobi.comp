@@ -30,13 +30,13 @@ void main() {
     // Decode image info
     vec4 set = imageLoad(boundaries, top_pos);
     vec2 induced_flow = (vec2(set.rg) - (128./255.));
-    float forced_divergence = set.b - (128./255.);
+    float forced_divergence = (128./255.) - set.b;
     float amnt = set.a;
 
     top = mix(top, induced_flow.y, amnt);
-    //bottom = mix(bottom, induced_flow.y, amnt);
+    bottom = mix(bottom, induced_flow.y, amnt);
     left = mix(left, induced_flow.x, amnt);
-    //right = mix(right, induced_flow.x, amnt);
+    right = mix(right, induced_flow.x, amnt);
 
     // Enforce checkerboard pattern
     if (((gid.x % 2) ^ (gid.y % 2)) == parity) {
