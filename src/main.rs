@@ -4,9 +4,9 @@ use std::fs::File;
 
 use anyhow::{bail, format_err, Context as AnyhowContext, Result};
 use gl::HasContext;
-use glutin::event::{Event, TouchPhase, WindowEvent, VirtualKeyCode, MouseButton, ElementState};
+use glutin::event::{ElementState, Event, MouseButton, TouchPhase, VirtualKeyCode, WindowEvent};
 use glutin::event_loop::ControlFlow;
-use png::{ColorType, BitDepth};
+use png::{BitDepth, ColorType};
 
 const N_PARTICLES: i32 = 150_000;
 const LOCAL_SIZE: i32 = 32;
@@ -109,18 +109,30 @@ fn main() -> Result<()> {
         let mut write_v = texture(gl::R32F as _, gl::RED, gl::FLOAT, None)?;
 
         // Set up background texture
-        let background_arg = std::env::args().skip(1).next().expect("Requires background pic");
-        let decoder = png::Decoder::new(File::open(background_arg).unwrap());
-        let mut reader = decoder.read_info().unwrap();
-        let mut buf = vec![0; reader.output_buffer_size()];
-        let info = reader.next_frame(&mut buf).unwrap();
-        assert_eq!(info.bit_depth, BitDepth::Eight);
-        assert_eq!(info.color_type, ColorType::Rgba);
-        let image_data = &buf[..info.buffer_size()];
-        assert_eq!(info.width, WIDTH as u32);
-        assert_eq!(info.height, HEIGHT as u32);
+        let image_data;
+        if let Some(background_arg) = std::env::args().skip(1).next() {
+            let decoder = png::Decoder::new(File::open(background_arg).unwrap());
+            let mut reader = decoder.read_info().unwrap();
+            let mut buf = vec![0; reader.output_buffer_size()];
+            let info = reader.next_frame(&mut buf).unwrap();
+            assert_eq!(info.bit_depth, BitDepth::Eight);
+            assert_eq!(info.color_type, ColorType::Rgba);
+            image_data = buf[..info.buffer_size()].to_vec();
+            assert_eq!(info.width, WIDTH as u32);
+            assert_eq!(info.height, HEIGHT as u32);
+        } else {
+            image_data = std::iter::repeat([0x80, 0x80, 0x80, 0x00])
+                .take((WIDTH * HEIGHT) as usize)
+                .flatten()
+                .collect();
+        }
 
-        let background = texture(gl::RGBA8 as _, gl::RGBA, gl::UNSIGNED_BYTE, Some(&image_data))?;
+        let background = texture(
+            gl::RGBA8 as _,
+            gl::RGBA,
+            gl::UNSIGNED_BYTE,
+            Some(&image_data),
+        )?;
 
         // Set up GL state
         gl.clear_color(0., 0., 0., 1.0);
@@ -198,8 +210,9 @@ fn main() -> Result<()> {
                     // Set pens
                     let mut pen_keys: Vec<u64> = fingors.keys().copied().collect();
                     pen_keys.sort();
-                    let mut pens: Vec<f32> = pen_keys.iter().map(|id| fingors[id]).flatten().collect();
-                    pens.resize(4*MAX_FINGIES, 0.);
+                    let mut pens: Vec<f32> =
+                        pen_keys.iter().map(|id| fingors[id]).flatten().collect();
+                    pens.resize(4 * MAX_FINGIES, 0.);
                     let pen_loc = gl.get_uniform_location(draw_kernel, "pens");
                     gl.uniform_4_f32_slice(pen_loc.as_ref(), &pens);
                     // Set screen size
@@ -235,7 +248,7 @@ fn main() -> Result<()> {
                     let (sx, sy) = screen_size;
                     gl.uniform_2_f32(screen_size_loc.as_ref(), sx, sy);
                     gl.bind_vertex_array(Some(particle_vertex_array));
-                    gl.draw_arrays(gl::LINES, 0, N_PARTICLES*2);
+                    gl.draw_arrays(gl::LINES, 0, N_PARTICLES * 2);
 
                     dt = DT;
                     //fingors.clear();
@@ -303,7 +316,11 @@ fn main() -> Result<()> {
                             *y = py;
                         }
                     }
-                    WindowEvent::MouseInput { state, button: MouseButton::Left, .. } => {
+                    WindowEvent::MouseInput {
+                        state,
+                        button: MouseButton::Left,
+                        ..
+                    } => {
                         match state {
                             ElementState::Pressed => fingors.insert(MOUSE_IDX, [0.; 4]),
                             ElementState::Released => fingors.remove(&MOUSE_IDX),
