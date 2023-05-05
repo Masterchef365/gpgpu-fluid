@@ -28,7 +28,7 @@ void main() {
 
         vec2 pen_last_pos = pen_pos - pen_vel;
         if (distance(xy, pen_last_pos) < PEN_RADIUS) {
-            vel = pen_vel * 4.;
+            vel += pen_vel * 4.;
         }
 
         if (pen_dist < PEN_RADIUS) {
