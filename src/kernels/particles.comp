@@ -26,7 +26,7 @@ void main() {
         || last_state.x > size.x 
         || last_state.y > size.y;
 
-    if (do_reset || out_bounds || rand(last_state) < last_state.x) {
+    if (do_reset || out_bounds || true) {
         float rx = rand(last_state + vec2(2344., idx) / 1000);
         float ry = rand(last_state + vec2(1244., idx) / 1000);
 
@@ -47,5 +47,5 @@ void main() {
     float vel_v = texture(read_v, uv).x;
     vec2 vel = vec2(vel_u, vel_v);
 
-    particles[idx] += vel * dt;
+    particles[idx] += vel * dt * 40.;
 }

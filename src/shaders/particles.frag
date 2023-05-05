@@ -13,7 +13,7 @@ void main() {
 
     float t = clamp(length(vec2(u, v)) * 1.5, 0.3, 3.5);
     vec3 color = //mix(
-        vec3(1., 0.5, 0.01)/2.;
+        vec3(1., 0.5, 0.01)/3.;
         //vec3(0.9, 0.3, 1.),
         //t
     //) / 3.;
