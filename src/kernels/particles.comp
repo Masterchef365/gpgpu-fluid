@@ -32,7 +32,7 @@ void main() {
 
         float i = float(idx)/float(particles.length());
 
-        float t = log(i) * PI * 2. * 50.;
+        float t = log(i) * PI * 2. * 40.;
         vec2 r = vec2(cos(t), sin(t));
         r *= i;
 
