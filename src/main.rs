@@ -10,7 +10,7 @@ const N_PARTICLES: i32 = 700_000;
 const LOCAL_SIZE: i32 = 32;
 const WIDTH: i32 = 13 * LOCAL_SIZE;
 const HEIGHT: i32 = 8 * LOCAL_SIZE;
-const N_ITERS: u32 = 20;
+const N_ITERS: u32 = 40;
 const MAX_FINGIES: usize = 5;
 const DT: f32 = 0.1;
 

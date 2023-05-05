@@ -26,15 +26,15 @@ void main() {
         || last_state.x > size.x 
         || last_state.y > size.y;
 
-    if (do_reset || out_bounds) {
+    if (do_reset || out_bounds || rand(last_state) < last_state.x) {
         float rx = rand(last_state + vec2(2344., idx) / 1000);
         float ry = rand(last_state + vec2(1244., idx) / 1000);
 
         float i = float(idx)/float(particles.length());
 
-        float t = log(i) * PI * 2. * 40.;
+        float t = log(i) * PI * 2. * 30.;
         vec2 r = vec2(cos(t), sin(t));
-        r *= i;
+        r *= (i + 0.05)/1.05;
 
         r.x *= size.y/size.x;
         r = size * (r + 1.) / 2.;
