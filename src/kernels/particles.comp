@@ -13,6 +13,8 @@ float rand(vec2 co){
     return fract(sin(dot(co, vec2(12.9898, 78.233))) * 437.5453);
 }
 
+const float PI = 3.1415926;
+
 void main() {
     uint idx = gl_GlobalInvocationID.x;
     vec2 last_state = particles[idx];
@@ -28,10 +30,11 @@ void main() {
         float rx = rand(last_state + vec2(2344., idx) / 1000);
         float ry = rand(last_state + vec2(1244., idx) / 1000);
 
-        float t = rx * 2. * 3.141592;
-        float k = 0.5 + floor(ry * 10.) / 50.;
-        k += ry / 100.;
-        vec2 r = vec2(cos(t), sin(t)) * k;
+        float i = float(idx)/float(particles.length());
+
+        float t = i * PI * 2. * 50.;
+        vec2 r = vec2(cos(t), sin(t));
+        r *= i;
 
         r.x *= size.y/size.x;
         r = size * (r + 1.) / 2.;
