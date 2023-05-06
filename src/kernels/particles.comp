@@ -32,9 +32,10 @@ void main() {
 
         float i = float(idx)/float(particles.length());
 
-        float t = log(i) * PI * 2. * 30.;
+        float t = log(i) * PI * 2. * 3.;
         vec2 r = vec2(cos(t), sin(t));
         r *= (i + 0.05)/1.05;
+        r -= (rand(vec2(rx, ry)) * 2. - 1.) * 0.05;
 
         r.x *= size.y/size.x;
         r = size * (r + 1.) / 2.;
