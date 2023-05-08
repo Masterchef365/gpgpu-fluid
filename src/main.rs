@@ -6,7 +6,7 @@ use gl::HasContext;
 use glutin::event::{Event, TouchPhase, WindowEvent, VirtualKeyCode, MouseButton, ElementState};
 use glutin::event_loop::ControlFlow;
 
-const N_PARTICLES: i32 = 170_000;
+const N_PARTICLES: i32 = 200_000;
 const LOCAL_SIZE: i32 = 32;
 const WIDTH: i32 = 2 * 13 * LOCAL_SIZE;
 const HEIGHT: i32 = 2 * 8 * LOCAL_SIZE;
