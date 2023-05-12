@@ -26,7 +26,7 @@ void main() {
         || last_state.x > size.x 
         || last_state.y > size.y;
 
-    if (do_reset || out_bounds) {
+    if (do_reset || out_bounds || rand(last_state) < 0.005) {
         float j = float(idx) / float(particles.length());
 
         bool orient = j > 0.5;

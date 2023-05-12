@@ -276,7 +276,10 @@ fn main() -> Result<()> {
                             (input.state, input.virtual_keycode)
                         {
                             match key {
-                                VirtualKeyCode::Space => dt = 0.,
+                                VirtualKeyCode::Space => {
+                                    dt = 0.;
+                                    clear_frames = 3;
+                                }
                                 VirtualKeyCode::C => clear_frames = 3,
                                 VirtualKeyCode::T => clear_on = !clear_on,
                                 _ => (),
