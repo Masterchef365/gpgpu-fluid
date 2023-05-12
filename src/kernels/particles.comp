@@ -33,7 +33,7 @@ void main() {
         j -= 0.5 * float(orient);
         j *= 2.;
 
-        const float k = 20.;
+        const float k = 15.;
         j *= k;
         vec2 r = vec2(floor(j)/k, fract(j));
         r = r * 2. - 1.;
