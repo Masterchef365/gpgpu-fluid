@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 use anyhow::{bail, format_err, Context as AnyhowContext, Result};
 use gl::HasContext;
-use glutin::event::{Event, TouchPhase, WindowEvent, VirtualKeyCode, MouseButton, ElementState};
+use glutin::event::{ElementState, Event, MouseButton, TouchPhase, VirtualKeyCode, WindowEvent};
 use glutin::event_loop::ControlFlow;
 
 const N_PARTICLES: i32 = 300_000;
@@ -115,6 +115,8 @@ fn main() -> Result<()> {
 
         let mut dt = 0.;
         let mut fingors: HashMap<u64, [f32; 4]> = HashMap::new();
+        let mut clear_frames = 0;
+        let mut clear_on = false;
 
         // Event loop
         event_loop.run(move |event, _, control_flow| {
@@ -182,8 +184,9 @@ fn main() -> Result<()> {
                     // Set pens
                     let mut pen_keys: Vec<u64> = fingors.keys().copied().collect();
                     pen_keys.sort();
-                    let mut pens: Vec<f32> = pen_keys.iter().map(|id| fingors[id]).flatten().collect();
-                    pens.resize(4*MAX_FINGIES, 0.);
+                    let mut pens: Vec<f32> =
+                        pen_keys.iter().map(|id| fingors[id]).flatten().collect();
+                    pens.resize(4 * MAX_FINGIES, 0.);
                     let pen_loc = gl.get_uniform_location(draw_kernel, "pens");
                     gl.uniform_4_f32_slice(pen_loc.as_ref(), &pens);
                     // Set screen size
@@ -213,7 +216,10 @@ fn main() -> Result<()> {
                     gl.memory_barrier(gl::SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
                     // Draw particles
-                    gl.clear(gl::COLOR_BUFFER_BIT);
+                    if clear_on || clear_frames > 0 {
+                        gl.clear(gl::COLOR_BUFFER_BIT);
+                        clear_frames -= 1;
+                    }
                     gl.use_program(Some(particle_shader));
                     let screen_size_loc = gl.get_uniform_location(particle_shader, "screen_size");
                     let (sx, sy) = screen_size;
@@ -266,9 +272,13 @@ fn main() -> Result<()> {
                         _ => (),
                     },
                     WindowEvent::KeyboardInput { input, .. } => {
-                        if let Some(key) = input.virtual_keycode {
+                        if let (ElementState::Released, Some(key)) =
+                            (input.state, input.virtual_keycode)
+                        {
                             match key {
                                 VirtualKeyCode::Space => dt = 0.,
+                                VirtualKeyCode::C => clear_frames = 3,
+                                VirtualKeyCode::T => clear_on = !clear_on,
                                 _ => (),
                             }
                         }
@@ -287,7 +297,11 @@ fn main() -> Result<()> {
                             *y = py;
                         }
                     }
-                    WindowEvent::MouseInput { state, button: MouseButton::Left, .. } => {
+                    WindowEvent::MouseInput {
+                        state,
+                        button: MouseButton::Left,
+                        ..
+                    } => {
                         match state {
                             ElementState::Pressed => fingors.insert(MOUSE_IDX, [0.; 4]),
                             ElementState::Released => fingors.remove(&MOUSE_IDX),
