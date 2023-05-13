@@ -56,6 +56,13 @@ fn main() -> Result<()> {
         ];
         let particle_shader = create_program(&gl, &shader_sources)?;
 
+        // Set up fragment/vertex shaders
+        let fullscreen_sources = [
+            (gl::VERTEX_SHADER, include_str!("shaders/fullscreen.vert")),
+            (gl::FRAGMENT_SHADER, include_str!("shaders/fullscreen.frag")),
+        ];
+        let fullscreen_shader = create_program(&gl, &fullscreen_sources)?;
+
         let particle_kernel = create_program(
             &gl,
             &[(gl::COMPUTE_SHADER, include_str!("kernels/particles.comp"))],
@@ -226,6 +233,10 @@ fn main() -> Result<()> {
                     gl.uniform_2_f32(screen_size_loc.as_ref(), sx, sy);
                     gl.bind_vertex_array(Some(particle_vertex_array));
                     gl.draw_arrays(gl::POINTS, 0, N_PARTICLES);
+
+                    // Draw fullscreen triangle
+                    gl.use_program(Some(fullscreen_shader));
+                    gl.draw_arrays(gl::TRIANGLES, 0, 3);
 
                     dt = DT;
                     //fingors.clear();
