@@ -26,18 +26,18 @@ void main() {
         || last_state.x > size.x 
         || last_state.y > size.y;
 
-    if (do_reset || out_bounds || rand(last_state) < 0.005) {
+    if (do_reset || out_bounds) {
         float j = float(idx) / float(particles.length());
 
-        bool orient = j > 0.5;
-        j -= 0.5 * float(orient);
-        j *= 2.;
+        //bool orient = j > 0.5;
+        //j -= 0.5 * float(orient);
+        //j *= 2.;
 
         const float k = 15.;
         j *= k;
         vec2 r = vec2(floor(j)/k, fract(j));
         r = r * 2. - 1.;
-        if (orient) r = r.yx;
+        //if (orient) r = r.yx;
 
         r.x *= size.y/size.x;
         r = size * (r + 1.) / 2.;

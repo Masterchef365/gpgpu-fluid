@@ -108,8 +108,8 @@ fn main() -> Result<()> {
 
         // Set up GL state
         gl.clear_color(0., 0., 0., 1.0);
-        //gl.enable(gl::BLEND);
-        gl.disable(gl::BLEND);
+        gl.enable(gl::BLEND);
+        //gl.disable(gl::BLEND);
         gl.blend_func(gl::SRC_ALPHA, gl::ONE);
         //gl.enable(gl::VERTEX_PROGRAM_POINT_SIZE);
 
