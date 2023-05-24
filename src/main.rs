@@ -7,7 +7,7 @@ use anyhow::{bail, format_err, Context as AnyhowContext, Result};
 use gl::HasContext;
 use glutin::event::{ElementState, Event, MouseButton, TouchPhase, VirtualKeyCode, WindowEvent};
 use glutin::event_loop::ControlFlow;
-use notify::{Watcher, RecommendedWatcher, RecursiveMode, Result, EventKind};
+use notify::{EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 
 const N_PARTICLES: i32 = 700_000;
 const LOCAL_SIZE: i32 = 32;
@@ -54,33 +54,38 @@ fn main() -> Result<()> {
         );
         gl.bind_vertex_array(None);
 
-        // Set up fragment/vertex shaders
-        let shader_sources = [
-            (gl::VERTEX_SHADER, include_str!("shaders/particles.vert")),
-            (gl::FRAGMENT_SHADER, include_str!("shaders/particles.frag")),
-        ];
-        let particle_shader = create_program(&gl, &shader_sources)?;
+        let mut hotloader = ShaderHotloader::new()?;
 
-        let particle_kernel = create_program(
+        // Set up fragment/vertex shaders
+        let particle_shader = hotloader.add_program(
             &gl,
-            &[(gl::COMPUTE_SHADER, include_str!("kernels/particles.comp"))],
-        )
-        .unwrap();
-        let jacobi_kernel = create_program(
-            &gl,
-            &[(gl::COMPUTE_SHADER, include_str!("kernels/jacobi.comp"))],
-        )
-        .unwrap();
-        let advect_kernel = create_program(
-            &gl,
-            &[(gl::COMPUTE_SHADER, include_str!("kernels/advect.comp"))],
-        )
-        .unwrap();
-        let draw_kernel = create_program(
-            &gl,
-            &[(gl::COMPUTE_SHADER, include_str!("kernels/draw.comp"))],
-        )
-        .unwrap();
+            vec![
+                (gl::VERTEX_SHADER, "src/shaders/particles.vert".into()),
+                (gl::FRAGMENT_SHADER, "src/shaders/particles.frag".into()),
+            ],
+        )?;
+
+        let particle_kernel = hotloader
+            .add_program(
+                &gl,
+                vec![(gl::COMPUTE_SHADER, "src/kernels/particles.comp".into())],
+            )
+            .unwrap();
+        let jacobi_kernel = hotloader
+            .add_program(
+                &gl,
+                vec![(gl::COMPUTE_SHADER, "src/kernels/jacobi.comp".into())],
+            )
+            .unwrap();
+        let advect_kernel = hotloader
+            .add_program(
+                &gl,
+                vec![(gl::COMPUTE_SHADER, "src/kernels/advect.comp".into())],
+            )
+            .unwrap();
+        let draw_kernel = hotloader
+            .add_program(&gl, vec![(gl::COMPUTE_SHADER, "src/kernels/draw.comp".into())])
+            .unwrap();
 
         // Set up textures
         let texture = || -> Result<gl::NativeTexture> {
@@ -132,9 +137,13 @@ fn main() -> Result<()> {
                     window.window().request_redraw();
                 }
                 Event::RedrawRequested(_) => {
+                    hotloader.update(&gl);
+
                     // Execute jacobi kernel
-                    gl.use_program(Some(jacobi_kernel));
-                    let parity_loc = gl.get_uniform_location(jacobi_kernel, "parity");
+                    gl.use_program(Some(hotloader.get_program(jacobi_kernel)));
+                    let parity_loc =
+                        gl.get_uniform_location(hotloader.get_program(jacobi_kernel), "parity");
+
                     for i in 0..N_ITERS * 2 {
                         let parity = i % 2;
 
@@ -160,7 +169,7 @@ fn main() -> Result<()> {
                     }
 
                     // Execute advection kernel
-                    gl.use_program(Some(advect_kernel));
+                    gl.use_program(Some(hotloader.get_program(advect_kernel)));
                     // Set read textures
                     gl.active_texture(gl::TEXTURE0);
                     gl.bind_texture(gl::TEXTURE_2D, Some(read_u));
@@ -170,7 +179,7 @@ fn main() -> Result<()> {
                     gl.bind_image_texture(2, write_u, 0, false, 0, gl::READ_WRITE, gl::R32F);
                     gl.bind_image_texture(3, write_v, 0, false, 0, gl::READ_WRITE, gl::R32F);
                     // Set dt
-                    let dt_loc = gl.get_uniform_location(advect_kernel, "dt");
+                    let dt_loc = gl.get_uniform_location(hotloader.get_program(advect_kernel), "dt");
                     gl.uniform_1_f32(dt_loc.as_ref(), dt.unwrap_or(CLEAR_DT));
                     gl.dispatch_compute((WIDTH / LOCAL_SIZE) as _, (HEIGHT / LOCAL_SIZE) as _, 1);
                     // Memory barrier for vertex shader
@@ -180,7 +189,7 @@ fn main() -> Result<()> {
                     std::mem::swap(&mut read_v, &mut write_v);
 
                     // Execute touch/mouse drawing kernel
-                    gl.use_program(Some(draw_kernel));
+                    gl.use_program(Some(hotloader.get_program(draw_kernel)));
                     // Set read textures
                     gl.bind_image_texture(0, read_u, 0, false, 0, gl::READ_WRITE, gl::R32F);
                     gl.bind_image_texture(1, read_v, 0, false, 0, gl::READ_WRITE, gl::R32F);
@@ -190,16 +199,16 @@ fn main() -> Result<()> {
                     let mut pens: Vec<f32> =
                         pen_keys.iter().map(|id| fingors[id]).flatten().collect();
                     pens.resize(4 * MAX_FINGIES, 0.);
-                    let pen_loc = gl.get_uniform_location(draw_kernel, "pens");
+                    let pen_loc = gl.get_uniform_location(hotloader.get_program(draw_kernel), "pens");
                     gl.uniform_4_f32_slice(pen_loc.as_ref(), &pens);
                     // Set screen size
-                    let screen_size_loc = gl.get_uniform_location(draw_kernel, "screen_size");
+                    let screen_size_loc = gl.get_uniform_location(hotloader.get_program(draw_kernel), "screen_size");
                     let (sx, sy) = screen_size;
                     gl.uniform_2_f32(screen_size_loc.as_ref(), sx, sy);
                     gl.dispatch_compute((WIDTH / LOCAL_SIZE) as _, (HEIGHT / LOCAL_SIZE) as _, 1);
 
                     // Execute particle kernel
-                    gl.use_program(Some(particle_kernel));
+                    gl.use_program(Some(hotloader.get_program(particle_kernel)));
                     // Set read textures
                     gl.active_texture(gl::TEXTURE0);
                     gl.bind_texture(gl::TEXTURE_2D, Some(read_u));
@@ -211,7 +220,7 @@ fn main() -> Result<()> {
                     // Set particle buffer
                     gl.bind_buffer_base(gl::SHADER_STORAGE_BUFFER, 4, Some(particle_buffer));
                     // Set dt
-                    let dt_loc = gl.get_uniform_location(particle_kernel, "dt");
+                    let dt_loc = gl.get_uniform_location(hotloader.get_program(particle_kernel), "dt");
                     gl.uniform_1_f32(dt_loc.as_ref(), dt.unwrap_or(CLEAR_DT));
                     // Dispatch
                     gl.dispatch_compute(N_PARTICLES as u32, 1, 1);
@@ -220,8 +229,8 @@ fn main() -> Result<()> {
 
                     // Draw particles
                     gl.clear(gl::COLOR_BUFFER_BIT);
-                    gl.use_program(Some(particle_shader));
-                    let screen_size_loc = gl.get_uniform_location(particle_shader, "screen_size");
+                    gl.use_program(Some(hotloader.get_program(particle_shader)));
+                    let screen_size_loc = gl.get_uniform_location(hotloader.get_program(particle_shader), "screen_size");
                     let (sx, sy) = screen_size;
                     gl.uniform_2_f32(screen_size_loc.as_ref(), sx, sy);
                     gl.bind_vertex_array(Some(particle_vertex_array));
@@ -253,8 +262,8 @@ fn main() -> Result<()> {
                         );
                     }
                     WindowEvent::CloseRequested => {
-                        gl.delete_program(particle_shader);
-                        gl.delete_vertex_array(particle_vertex_array);
+                        //gl.delete_program(particle_shader);
+                        //gl.delete_vertex_array(particle_vertex_array);
                         *control_flow = ControlFlow::Exit
                     }
                     WindowEvent::Touch(touch) => match touch.phase {
@@ -323,7 +332,7 @@ fn main() -> Result<()> {
 /// Compile and link program from sources
 pub fn create_program(
     gl: &gl::Context,
-    shader_sources: &[(u32, String)],
+    shader_sources: &[(u32, PathBuf)],
 ) -> Result<gl::NativeProgram> {
     unsafe {
         let program = gl
@@ -340,7 +349,8 @@ pub fn create_program(
                 .map_err(|e| format_err!("{:#}", e))
                 .context("Cannot create program")?;
 
-            gl.shader_source(shader, &shader_source);
+            let text = std::fs::read_to_string(shader_source)?;
+            gl.shader_source(shader, &text);
             gl.compile_shader(shader);
 
             if !gl.get_shader_compile_status(shader) {
@@ -368,7 +378,7 @@ pub fn create_program(
     }
 }
 
-type ProgramSpec = Vec<(u32, String)>;
+type ProgramSpec = Vec<(u32, PathBuf)>;
 
 struct ShaderHotloader {
     /// Maps source path to program index
@@ -377,18 +387,15 @@ struct ShaderHotloader {
     programs: Vec<(gl::Program, ProgramSpec)>,
     event_rx: Receiver<notify::Event>,
     watcher: RecommendedWatcher,
-    root: PathBuf,
 }
 
 impl ShaderHotloader {
-    pub fn new(root: PathBuf) -> Result<Self> {
+    pub fn new() -> Result<Self> {
         let (tx, event_rx) = channel();
 
-        let mut watcher = notify::recommended_watcher(move |res| {
-            match res {
-                Ok(event) => tx.send(event).unwrap(),
-                Err(e) => println!("watch error: {:?}", e),
-            }
+        let watcher = notify::recommended_watcher(move |res| match res {
+            Ok(event) => tx.send(event).unwrap(),
+            Err(e) => println!("watch error: {:?}", e),
         })?;
 
         Ok(Self {
@@ -396,20 +403,18 @@ impl ShaderHotloader {
             path_to_idx: HashMap::new(),
             programs: vec![],
             event_rx,
-            root,
         })
     }
 
-    pub fn add_program(&mut self, gl: &gl::Context, sources: ProgramSpec) -> Result<usize> {
+    pub fn add_program(&mut self, gl: &gl::Context, spec: ProgramSpec) -> Result<usize> {
         let idx = self.programs.len();
-        for (_, source) in &sources {
-            let path = self.root.join(source);
-            self.watcher.watch(&path, RecursiveMode::NonRecursive);
-            self.path_to_idx.insert(path, idx);
+        for (_, path) in &spec {
+            self.watcher.watch(&path, RecursiveMode::NonRecursive)?;
+            self.path_to_idx.insert(path.clone(), idx);
         }
 
-        let program = create_program(gl, &sources)?;
-        self.programs.push((program, sources));
+        let program = create_program(gl, &spec)?;
+        self.programs.push((program, spec));
 
         Ok(idx)
     }
