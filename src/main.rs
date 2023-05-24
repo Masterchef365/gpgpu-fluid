@@ -9,7 +9,7 @@ use glutin::event::{ElementState, Event, MouseButton, TouchPhase, VirtualKeyCode
 use glutin::event_loop::ControlFlow;
 use notify::{EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 
-const N_PARTICLES: i32 = 300_000;
+const N_PARTICLES: i32 = 100_000;
 const LOCAL_SIZE: i32 = 32;
 const WIDTH: i32 = 13 * LOCAL_SIZE;
 const HEIGHT: i32 = 8 * LOCAL_SIZE;
@@ -126,6 +126,8 @@ fn main() -> Result<()> {
         let mut dt: Option<f32> = None;
         let mut fingors: HashMap<u64, [f32; 4]> = HashMap::new();
 
+        let mut clears = 0;
+
         // Event loop
         event_loop.run(move |event, _, control_flow| {
             *control_flow = ControlFlow::Wait;
@@ -228,7 +230,10 @@ fn main() -> Result<()> {
                     gl.memory_barrier(gl::SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
                     // Draw particles
-                    gl.clear(gl::COLOR_BUFFER_BIT);
+                    if clears > 0 {
+                        gl.clear(gl::COLOR_BUFFER_BIT);
+                        clears -= 1;
+                    }
                     gl.use_program(Some(hotloader.get_program(particle_shader)));
                     let screen_size_loc = gl.get_uniform_location(hotloader.get_program(particle_shader), "screen_size");
                     let (sx, sy) = screen_size;
@@ -292,6 +297,7 @@ fn main() -> Result<()> {
                                 VirtualKeyCode::Down => dt = dt.map(|dt| dt - DELTA),
                                 VirtualKeyCode::Left => dt = dt.map(|dt| dt + DELTA * 10.),
                                 VirtualKeyCode::Right => dt = dt.map(|dt| dt - DELTA * 10.),
+                                VirtualKeyCode::C => clears = 3,
                                 _ => (),
                             }
                         }
