@@ -6,11 +6,11 @@ use gl::HasContext;
 use glutin::event::{Event, TouchPhase, WindowEvent, VirtualKeyCode, MouseButton, ElementState};
 use glutin::event_loop::ControlFlow;
 
-const N_PARTICLES: i32 = 300_000;
+const N_PARTICLES: i32 = 700_000;
 const LOCAL_SIZE: i32 = 32;
-const WIDTH: i32 = 2 * 13 * LOCAL_SIZE;
-const HEIGHT: i32 = 2 *  8 * LOCAL_SIZE;
-const N_ITERS: u32 = 10;
+const WIDTH: i32 = 13 * LOCAL_SIZE;
+const HEIGHT: i32 = 8 * LOCAL_SIZE;
+const N_ITERS: u32 = 20;
 const MAX_FINGIES: usize = 5;
 const DT: f32 = 0.1;
 
@@ -271,12 +271,14 @@ fn main() -> Result<()> {
                         _ => (),
                     },
                     WindowEvent::KeyboardInput { input, .. } => {
-                        if let (Some(key), ElementState::Released) = (input.virtual_keycode, input.state) {
-                            const DELTA: f32 = 0.1;
+                        if let (Some(key), _) = (input.virtual_keycode, input.state) {
+                            const DELTA: f32 = 0.01;
                             match key {
                                 VirtualKeyCode::Space => dt = None,
                                 VirtualKeyCode::Up => dt = dt.map(|dt| dt + DELTA),
                                 VirtualKeyCode::Down => dt = dt.map(|dt| dt - DELTA),
+                                VirtualKeyCode::Left => dt = dt.map(|dt| dt + DELTA * 10.),
+                                VirtualKeyCode::Right => dt = dt.map(|dt| dt - DELTA * 10.),
                                 _ => (),
                             }
                             dbg!(dt);
