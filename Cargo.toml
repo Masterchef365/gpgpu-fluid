@@ -7,4 +7,4 @@ edition = "2021"
 anyhow = "1"
 glow = "0.12.1"
 glutin = "0.28"
-
+notify = "6"

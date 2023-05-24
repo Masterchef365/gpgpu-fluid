@@ -1,10 +1,13 @@
 extern crate glow as gl;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use std::path::{Path, PathBuf};
+use std::sync::mpsc::{channel, Receiver};
 
 use anyhow::{bail, format_err, Context as AnyhowContext, Result};
 use gl::HasContext;
-use glutin::event::{Event, TouchPhase, WindowEvent, VirtualKeyCode, MouseButton, ElementState};
+use glutin::event::{ElementState, Event, MouseButton, TouchPhase, VirtualKeyCode, WindowEvent};
 use glutin::event_loop::ControlFlow;
+use notify::{Watcher, RecommendedWatcher, RecursiveMode, Result, EventKind};
 
 const N_PARTICLES: i32 = 700_000;
 const LOCAL_SIZE: i32 = 32;
@@ -184,8 +187,9 @@ fn main() -> Result<()> {
                     // Set pens
                     let mut pen_keys: Vec<u64> = fingors.keys().copied().collect();
                     pen_keys.sort();
-                    let mut pens: Vec<f32> = pen_keys.iter().map(|id| fingors[id]).flatten().collect();
-                    pens.resize(4*MAX_FINGIES, 0.);
+                    let mut pens: Vec<f32> =
+                        pen_keys.iter().map(|id| fingors[id]).flatten().collect();
+                    pens.resize(4 * MAX_FINGIES, 0.);
                     let pen_loc = gl.get_uniform_location(draw_kernel, "pens");
                     gl.uniform_4_f32_slice(pen_loc.as_ref(), &pens);
                     // Set screen size
@@ -298,7 +302,11 @@ fn main() -> Result<()> {
                             *y = py;
                         }
                     }
-                    WindowEvent::MouseInput { state, button: MouseButton::Left, .. } => {
+                    WindowEvent::MouseInput {
+                        state,
+                        button: MouseButton::Left,
+                        ..
+                    } => {
                         match state {
                             ElementState::Pressed => fingors.insert(MOUSE_IDX, [0.; 4]),
                             ElementState::Released => fingors.remove(&MOUSE_IDX),
@@ -315,7 +323,7 @@ fn main() -> Result<()> {
 /// Compile and link program from sources
 pub fn create_program(
     gl: &gl::Context,
-    shader_sources: &[(u32, &str)],
+    shader_sources: &[(u32, String)],
 ) -> Result<gl::NativeProgram> {
     unsafe {
         let program = gl
@@ -357,5 +365,77 @@ pub fn create_program(
         }
 
         Ok(program)
+    }
+}
+
+type ProgramSpec = Vec<(u32, String)>;
+
+struct ShaderHotloader {
+    /// Maps source path to program index
+    path_to_idx: HashMap<PathBuf, usize>,
+    /// Programs, in order of index
+    programs: Vec<(gl::Program, ProgramSpec)>,
+    event_rx: Receiver<notify::Event>,
+    watcher: RecommendedWatcher,
+    root: PathBuf,
+}
+
+impl ShaderHotloader {
+    pub fn new(root: PathBuf) -> Result<Self> {
+        let (tx, event_rx) = channel();
+
+        let mut watcher = notify::recommended_watcher(move |res| {
+            match res {
+                Ok(event) => tx.send(event).unwrap(),
+                Err(e) => println!("watch error: {:?}", e),
+            }
+        })?;
+
+        Ok(Self {
+            watcher,
+            path_to_idx: HashMap::new(),
+            programs: vec![],
+            event_rx,
+            root,
+        })
+    }
+
+    pub fn add_program(&mut self, gl: &gl::Context, sources: ProgramSpec) -> Result<usize> {
+        let idx = self.programs.len();
+        for (_, source) in &sources {
+            let path = self.root.join(source);
+            self.watcher.watch(&path, RecursiveMode::NonRecursive);
+            self.path_to_idx.insert(path, idx);
+        }
+
+        let program = create_program(gl, &sources)?;
+        self.programs.push((program, sources));
+
+        Ok(idx)
+    }
+
+    pub fn update(&mut self, gl: &gl::Context) {
+        let mut needs_update: HashSet<usize> = HashSet::new();
+
+        for event in self.event_rx.try_iter() {
+            for path in event.paths {
+                if let Some(idx) = self.path_to_idx.get(&path) {
+                    needs_update.insert(*idx);
+                }
+            }
+        }
+
+        for needed_update in needs_update {
+            let (old_program, shader_sources) = &mut self.programs[needed_update];
+            match create_program(gl, shader_sources) {
+                Err(e) => eprintln!("Error compiling {:?};\n {:#}", shader_sources, e),
+                Ok(program) => *old_program = program,
+            }
+        }
+    }
+
+    pub fn get_program(&self, idx: usize) -> gl::Program {
+        let (prog, _) = &self.programs[idx];
+        *prog
     }
 }
