@@ -9,7 +9,7 @@ use glutin::event::{ElementState, Event, MouseButton, TouchPhase, VirtualKeyCode
 use glutin::event_loop::ControlFlow;
 use notify::{EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 
-const N_PARTICLES: i32 = 100_000;
+const N_PARTICLES: i32 = 10_000;
 const LOCAL_SIZE: i32 = 32;
 const WIDTH: i32 = 13 * LOCAL_SIZE;
 const HEIGHT: i32 = 8 * LOCAL_SIZE;

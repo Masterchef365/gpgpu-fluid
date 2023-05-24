@@ -27,7 +27,12 @@ void main() {
     ) / 3.;
     */
 
-    vec3 color = hsv2rgb(vec3(fract((f_idx - 0.5) * 1.), 0.95, 1.));
+    vec3 color = hsv2rgb(vec3(
+            fract((f_idx - 0.5) * 1.), 
+            fract(f_idx*99123.123),
+            clamp(fract(f_idx*93.123)+0.5,0.,1.)
+            //1.
+    ));
 
     out_color = vec4(color, 1.);
 }
