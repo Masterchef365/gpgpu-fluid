@@ -8,11 +8,13 @@ use glutin::event_loop::ControlFlow;
 
 const N_PARTICLES: i32 = 300_000;
 const LOCAL_SIZE: i32 = 32;
-const WIDTH: i32 = 13 * LOCAL_SIZE;
-const HEIGHT: i32 = 8 * LOCAL_SIZE;
-const N_ITERS: u32 = 20;
+const WIDTH: i32 = 2 * 13 * LOCAL_SIZE;
+const HEIGHT: i32 = 2 *  8 * LOCAL_SIZE;
+const N_ITERS: u32 = 10;
 const MAX_FINGIES: usize = 5;
 const DT: f32 = 0.1;
+
+const CLEAR_DT: f32 = 9999.;
 
 const MOUSE_IDX: u64 = 0;
 
@@ -113,7 +115,7 @@ fn main() -> Result<()> {
         gl.blend_func(gl::SRC_ALPHA, gl::ONE);
         //gl.enable(gl::VERTEX_PROGRAM_POINT_SIZE);
 
-        let mut dt = 0.;
+        let mut dt: Option<f32> = None;
         let mut fingors: HashMap<u64, [f32; 4]> = HashMap::new();
 
         // Event loop
@@ -166,7 +168,7 @@ fn main() -> Result<()> {
                     gl.bind_image_texture(3, write_v, 0, false, 0, gl::READ_WRITE, gl::R32F);
                     // Set dt
                     let dt_loc = gl.get_uniform_location(advect_kernel, "dt");
-                    gl.uniform_1_f32(dt_loc.as_ref(), dt);
+                    gl.uniform_1_f32(dt_loc.as_ref(), dt.unwrap_or(CLEAR_DT));
                     gl.dispatch_compute((WIDTH / LOCAL_SIZE) as _, (HEIGHT / LOCAL_SIZE) as _, 1);
                     // Memory barrier for vertex shader
                     gl.memory_barrier(gl::SHADER_IMAGE_ACCESS_BARRIER_BIT);
@@ -206,7 +208,7 @@ fn main() -> Result<()> {
                     gl.bind_buffer_base(gl::SHADER_STORAGE_BUFFER, 4, Some(particle_buffer));
                     // Set dt
                     let dt_loc = gl.get_uniform_location(particle_kernel, "dt");
-                    gl.uniform_1_f32(dt_loc.as_ref(), dt);
+                    gl.uniform_1_f32(dt_loc.as_ref(), dt.unwrap_or(CLEAR_DT));
                     // Dispatch
                     gl.dispatch_compute(N_PARTICLES as u32, 1, 1);
                     // Memory barrier for vertex shader
@@ -221,8 +223,11 @@ fn main() -> Result<()> {
                     gl.bind_vertex_array(Some(particle_vertex_array));
                     gl.draw_arrays(gl::POINTS, 0, N_PARTICLES);
 
-                    dt = DT;
                     //fingors.clear();
+
+                    if dt.is_none() {
+                        dt = Some(DT);
+                    }
 
                     window.swap_buffers().unwrap();
                 }
@@ -266,11 +271,15 @@ fn main() -> Result<()> {
                         _ => (),
                     },
                     WindowEvent::KeyboardInput { input, .. } => {
-                        if let Some(key) = input.virtual_keycode {
+                        if let (Some(key), ElementState::Released) = (input.virtual_keycode, input.state) {
+                            const DELTA: f32 = 0.1;
                             match key {
-                                VirtualKeyCode::Space => dt = 0.,
+                                VirtualKeyCode::Space => dt = None,
+                                VirtualKeyCode::Up => dt = dt.map(|dt| dt + DELTA),
+                                VirtualKeyCode::Down => dt = dt.map(|dt| dt - DELTA),
                                 _ => (),
                             }
+                            dbg!(dt);
                         }
                     }
                     WindowEvent::CursorMoved { position, .. } => {
