@@ -12,6 +12,10 @@ float bilinear(sampler2D img, vec2 pt) {
     return texture(img, pt / size).x;
 }
 
+float fleel(float x) {
+    return (floor(x) + ceil(x))/2.;
+}
+
 void main() {
     ivec2 gid = ivec2(gl_GlobalInvocationID.xy);
     vec2 size = vec2(imageSize(write_u));
@@ -42,6 +46,12 @@ void main() {
     float next_v = bilinear(read_v, k + vec2(0.5)).x;
 
     vec2 vel = vec2(next_u, next_v);
+
+    float j = 2.;
+
+    if (length(vel) > 0.)
+        vel = normalize(vel) * fleel(length(vel)*j)/j;
+
     //vel += float(length(uv) < 0.2) * vec2(0.2, 0);
 
     // Write semi-lagrangian calc
