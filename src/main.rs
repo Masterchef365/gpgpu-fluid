@@ -54,7 +54,7 @@ fn main() -> Result<()> {
         );
         gl.bind_vertex_array(None);
 
-        let mut hotloader = ShaderHotloader::new()?;
+        let mut hotloader = ShaderHotloader::new("src".into())?;
 
         // Set up fragment/vertex shaders
         let particle_shader = hotloader.add_program(
@@ -294,7 +294,6 @@ fn main() -> Result<()> {
                                 VirtualKeyCode::Right => dt = dt.map(|dt| dt - DELTA * 10.),
                                 _ => (),
                             }
-                            dbg!(dt);
                         }
                     }
                     WindowEvent::CursorMoved { position, .. } => {
@@ -390,13 +389,15 @@ struct ShaderHotloader {
 }
 
 impl ShaderHotloader {
-    pub fn new() -> Result<Self> {
+    pub fn new(root: PathBuf) -> Result<Self> {
         let (tx, event_rx) = channel();
 
-        let watcher = notify::recommended_watcher(move |res| match res {
+        let mut watcher = notify::recommended_watcher(move |res| match res {
             Ok(event) => tx.send(event).unwrap(),
             Err(e) => println!("watch error: {:?}", e),
         })?;
+
+        watcher.watch(&root, RecursiveMode::Recursive)?;
 
         Ok(Self {
             watcher,
@@ -409,7 +410,8 @@ impl ShaderHotloader {
     pub fn add_program(&mut self, gl: &gl::Context, spec: ProgramSpec) -> Result<usize> {
         let idx = self.programs.len();
         for (_, path) in &spec {
-            self.watcher.watch(&path, RecursiveMode::NonRecursive)?;
+            let path = path.canonicalize()?;
+            //self.watcher.watch(&path, RecursiveMode::NonRecursive)?;
             self.path_to_idx.insert(path.clone(), idx);
         }
 
@@ -432,9 +434,12 @@ impl ShaderHotloader {
 
         for needed_update in needs_update {
             let (old_program, shader_sources) = &mut self.programs[needed_update];
-            match create_program(gl, shader_sources) {
+            match create_program(gl, &shader_sources) {
                 Err(e) => eprintln!("Error compiling {:?};\n {:#}", shader_sources, e),
-                Ok(program) => *old_program = program,
+                Ok(program) => {
+                    println!("Finished recompiling {:?}", shader_sources);
+                    *old_program = program;
+                }
             }
         }
     }
