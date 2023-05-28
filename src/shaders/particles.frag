@@ -28,7 +28,9 @@ void main() {
     */
 
     float h = fract((f_idx - 0.5) * 1.);
-    vec3 color = hsv2rgb(vec3(h, 0.95, 1.));
+    h = mix(0.25, 0.4, h);
+    vec3 color = hsv2rgb(vec3(h, 0.90, 1e-2));
+    //color = vec3(1e-2) * vec3(0.388,0.168,0.995);
 
     out_color = vec4(color, 1.);
 }

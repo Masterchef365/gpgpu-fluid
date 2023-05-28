@@ -58,7 +58,7 @@ void main() {
             rand(vec2(gid)),
             rand(vec2(gid.yx))
         ) * 2. - 1.;
-        vel += p / 10.;
+        vel += p / 100.;
         //normalize(vel) * fleel(length(vel)*j)/j;
 
     //vel += float(length(uv) < 0.2) * vec2(0.2, 0);
