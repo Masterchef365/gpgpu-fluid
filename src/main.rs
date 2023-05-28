@@ -38,7 +38,7 @@ fn main() -> Result<()> {
 
         let mut screen_size = (1024., 768.);
 
-        let mut blend_on = false;
+        let mut blend_on = true;
 
         // Particle vertex array
         let particle_vertex_array = gl
@@ -140,6 +140,12 @@ fn main() -> Result<()> {
                 }
                 Event::RedrawRequested(_) => {
                     hotloader.update(&gl);
+
+                    if blend_on {
+                        gl.enable(gl::BLEND);
+                    } else {
+                        gl.disable(gl::BLEND);
+                    }
 
                     // Execute jacobi kernel
                     gl.use_program(Some(hotloader.get_program(jacobi_kernel)));
@@ -302,11 +308,6 @@ fn main() -> Result<()> {
                                     if input.state == ElementState::Released {
                                         blend_on = !blend_on;
                                         //dbg!(blend_on);
-                                        if blend_on {
-                                            gl.enable(gl::BLEND);
-                                        } else {
-                                            gl.disable(gl::BLEND);
-                                        }
                                     }
                                 }
                                 _ => (),
