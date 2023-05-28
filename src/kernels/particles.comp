@@ -28,8 +28,6 @@ void main() {
 
     if (do_reset || out_bounds) {
         /*
-        float rx = rand(last_state + vec2(2344., idx) / 1000);
-        float ry = rand(last_state + vec2(1244., idx) / 1000);
 
         float i = float(idx)/float(particles.length());
 
@@ -47,13 +45,18 @@ void main() {
         vec2 r = vec2(cos(j), sin(j));
 
         vec2 pseudocoord = vec2(idx, 3240.)/1e3;
-        r /= pow(floor(rand(pseudocoord) * 8.), 1./3.);
+        //r /= pow(floor(rand(pseudocoord) * 8.), 1./3.);
+        r /= 2.;
 
         r.x *= size.y/size.x;
         r = size * (r + 1.) / 2.;
 
         particles[idx] = r;
     }
+
+    float rx = rand(last_state);
+    float ry = rand(last_state.yx);
+    particles[idx] += (vec2(rx, ry) * 2. - 1.) * 1e-3;
 
     vec2 uv = particles[idx] / imageSize(write_img);
     float vel_u = texture(read_u, uv).x;
