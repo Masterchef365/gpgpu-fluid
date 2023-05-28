@@ -38,6 +38,8 @@ fn main() -> Result<()> {
 
         let mut screen_size = (1024., 768.);
 
+        let mut blend_on = false;
+
         // Particle vertex array
         let particle_vertex_array = gl
             .create_vertex_array()
@@ -118,8 +120,6 @@ fn main() -> Result<()> {
 
         // Set up GL state
         gl.clear_color(0., 0., 0., 1.0);
-        //gl.enable(gl::BLEND);
-        gl.disable(gl::BLEND);
         gl.blend_func(gl::SRC_ALPHA, gl::ONE);
         //gl.enable(gl::VERTEX_PROGRAM_POINT_SIZE);
 
@@ -289,7 +289,7 @@ fn main() -> Result<()> {
                         _ => (),
                     },
                     WindowEvent::KeyboardInput { input, .. } => {
-                        if let (Some(key), _) = (input.virtual_keycode, input.state) {
+                        if let Some(key) = input.virtual_keycode {
                             const DELTA: f32 = 0.01;
                             match key {
                                 VirtualKeyCode::Space => dt = None,
@@ -298,6 +298,17 @@ fn main() -> Result<()> {
                                 VirtualKeyCode::Left => dt = dt.map(|dt| dt + DELTA * 10.),
                                 VirtualKeyCode::Right => dt = dt.map(|dt| dt - DELTA * 10.),
                                 VirtualKeyCode::C => clears = 3,
+                                VirtualKeyCode::B => {
+                                    if input.state == ElementState::Released {
+                                        blend_on = !blend_on;
+                                        //dbg!(blend_on);
+                                        if blend_on {
+                                            gl.enable(gl::BLEND);
+                                        } else {
+                                            gl.disable(gl::BLEND);
+                                        }
+                                    }
+                                }
                                 _ => (),
                             }
                         }
