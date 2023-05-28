@@ -12,6 +12,10 @@ float bilinear(sampler2D img, vec2 pt) {
     return texture(img, pt / size).x;
 }
 
+float rand(vec2 co){
+    return fract(sin(dot(co, vec2(12.9898, 78.233))) * 43758.5453);
+}
+
 float fleel(float x) {
     return (floor(x) + ceil(x))/2.;
 }
@@ -49,8 +53,13 @@ void main() {
 
     float j = 2.;
 
-    if (length(vel) > 0.)
-        vel = normalize(vel) * fleel(length(vel)*j)/j;
+    //if (length(vel) > 0.)
+        vec2 p = vec2(
+            rand(vec2(gid)),
+            rand(vec2(gid.yx))
+        ) * 2. - 1.;
+        vel += p / 100.;
+        //normalize(vel) * fleel(length(vel)*j)/j;
 
     //vel += float(length(uv) < 0.2) * vec2(0.2, 0);
 
