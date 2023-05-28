@@ -29,6 +29,8 @@ void main() {
 
     vec3 color = hsv2rgb(vec3(fract((f_idx - 0.5) * 1.), 0.95, 1.));
 
+    if (fract(f_idx * 9999.) < 0.5) color = vec3(0);
+
     out_color = vec4(color, 1.);
 }
 
