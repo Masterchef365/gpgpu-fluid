@@ -43,6 +43,12 @@ void main() {
 
     vec2 vel = vec2(next_u, next_v);
     //vel += float(length(uv) < 0.2) * vec2(0.2, 0);
+    float g = 10.;
+    if (length(vel) != 0.) {
+        float l = length(vel);
+        float v = (ceil(l*g) + floor(l*g))/g/2.;
+        vel = normalize(vel) * mix(l, v, 0.9); 
+    }
 
     // Write semi-lagrangian calc
     imageStore(write_u, gid, vec4(vel.x, 0,0,0));
