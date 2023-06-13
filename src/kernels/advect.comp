@@ -9,7 +9,8 @@ uniform layout(location=0) float dt;
 
 float bilinear(sampler2D img, vec2 pt) {
     vec2 size = imageSize(write_u);
-    return texture(img, pt / size).x;
+    vec2 adjusted = pt + vec2(0.5);
+    return texture(img, adjusted / size).x;
 }
 
 void main() {
@@ -30,16 +31,16 @@ void main() {
     // Advect u
     float u, v;
     vec2 k;
-    u = bilinear(read_u, gid + vec2(0.5));
-    v = bilinear(read_v, gid + vec2(1,0));
+    u = bilinear(read_u, gid);
+    v = bilinear(read_v, gid + vec2(0.5,-0.5));
     k = vec2(gid) - vec2(u, v) * dt;
-    float next_u = bilinear(read_u, k + vec2(0.5)).x;
+    float next_u = bilinear(read_u, k).x;
 
     // Advect v
-    u = bilinear(read_u, gid + vec2(0,1)).x;
-    v = bilinear(read_v, gid + vec2(0.5)).x;
+    u = bilinear(read_u, gid + vec2(-0.5,0.5)).x;
+    v = bilinear(read_v, gid).x;
     k = vec2(gid) - vec2(u, v) * dt;
-    float next_v = bilinear(read_v, k + vec2(0.5)).x;
+    float next_v = bilinear(read_v, k).x;
 
     vec2 vel = vec2(next_u, next_v);
     //vel += float(length(uv) < 0.2) * vec2(0.2, 0);
