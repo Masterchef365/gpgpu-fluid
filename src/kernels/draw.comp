@@ -7,7 +7,7 @@ const uint MAX_FINGIES = 5;
 uniform layout(location=1) vec4 pens[MAX_FINGIES];
 uniform vec2 screen_size;
 
-const float PEN_RADIUS = 10.;
+const float PEN_SIZE = 1./38.;
 
 void main() {
     ivec2 xy = ivec2(gl_GlobalInvocationID.xy);
@@ -25,7 +25,9 @@ void main() {
         vec2 pen_vel = pens[i].zw * size * vec2(1, -1);
         float pen_dist = distance(xy, pen_pos);
         //vel += float(length(pen_pos) < PEN_RADIUS) * pen.zw;
-        if (pen_dist < PEN_RADIUS) {
+        float screen_size = max(size.x, size.y);
+        float pen_radius = screen_size * PEN_SIZE;
+        if (pen_dist < pen_radius) {
             vel += pen_vel;
         }
     }
