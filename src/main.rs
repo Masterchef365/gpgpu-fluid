@@ -2,6 +2,7 @@ extern crate glow as gl;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::{channel, Receiver};
+use std::time::Instant;
 
 use anyhow::{bail, format_err, Context as AnyhowContext, Result};
 use gl::HasContext;
@@ -125,6 +126,8 @@ fn main() -> Result<()> {
 
         let mut dt: Option<f32> = None;
         let mut fingors: HashMap<u64, [f32; 4]> = HashMap::new();
+        let mut wiggle_rate = 0.;
+        let time = Instant::now();
 
         // Event loop
         event_loop.run(move |event, _, control_flow| {
@@ -221,7 +224,7 @@ fn main() -> Result<()> {
                     gl.bind_buffer_base(gl::SHADER_STORAGE_BUFFER, 4, Some(particle_buffer));
                     // Set dt
                     let dt_loc = gl.get_uniform_location(hotloader.get_program(particle_kernel), "dt");
-                    gl.uniform_1_f32(dt_loc.as_ref(), dt.unwrap_or(CLEAR_DT));
+                    gl.uniform_1_f32(dt_loc.as_ref(), dt.unwrap_or(CLEAR_DT) * (wiggle_rate * time.elapsed().as_secs_f32()).cos());
                     // Dispatch
                     gl.dispatch_compute(N_PARTICLES as u32, 1, 1);
                     // Memory barrier for vertex shader
@@ -292,6 +295,8 @@ fn main() -> Result<()> {
                                 VirtualKeyCode::Down => dt = dt.map(|dt| dt - DELTA),
                                 VirtualKeyCode::Left => dt = dt.map(|dt| dt + DELTA * 10.),
                                 VirtualKeyCode::Right => dt = dt.map(|dt| dt - DELTA * 10.),
+                                VirtualKeyCode::W => wiggle_rate += 0.1,
+                                VirtualKeyCode::L => wiggle_rate -= 0.1,
                                 _ => (),
                             }
                         }
