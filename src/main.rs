@@ -15,7 +15,10 @@ const WIDTH: i32 = 13 * LOCAL_SIZE;
 const HEIGHT: i32 = 8 * LOCAL_SIZE;
 const N_ITERS: u32 = 20;
 const MAX_FINGIES: usize = 5;
-const DT: f32 = 0.1;
+const INITIAL_DT: f32 = 0.1;
+
+const LEFT_RIGHT_DELTA_DT: f32 = INITIAL_DT;
+const UP_DOWN_DELTA_DT: f32 = INITIAL_DT * 10.;
 
 const CLEAR_DT: f32 = 9999.;
 
@@ -239,7 +242,7 @@ fn main() -> Result<()> {
                     //fingors.clear();
 
                     if dt.is_none() {
-                        dt = Some(DT);
+                        dt = Some(INITIAL_DT);
                     }
 
                     window.swap_buffers().unwrap();
@@ -284,14 +287,13 @@ fn main() -> Result<()> {
                         _ => (),
                     },
                     WindowEvent::KeyboardInput { input, .. } => {
-                        if let (Some(key), _) = (input.virtual_keycode, input.state) {
-                            const DELTA: f32 = 0.01;
+                        if let (Some(key), ElementState::Pressed) = (input.virtual_keycode, input.state) {
                             match key {
                                 VirtualKeyCode::Space => dt = None,
-                                VirtualKeyCode::Up => dt = dt.map(|dt| dt + DELTA),
-                                VirtualKeyCode::Down => dt = dt.map(|dt| dt - DELTA),
-                                VirtualKeyCode::Left => dt = dt.map(|dt| dt + DELTA * 10.),
-                                VirtualKeyCode::Right => dt = dt.map(|dt| dt - DELTA * 10.),
+                                VirtualKeyCode::Up => dt = dt.map(|dt| dt - UP_DOWN_DELTA_DT),
+                                VirtualKeyCode::Down => dt = dt.map(|dt| dt + UP_DOWN_DELTA_DT),
+                                VirtualKeyCode::Left => dt = dt.map(|dt| dt - LEFT_RIGHT_DELTA_DT),
+                                VirtualKeyCode::Right => dt = dt.map(|dt| dt + LEFT_RIGHT_DELTA_DT),
                                 _ => (),
                             }
                         }
