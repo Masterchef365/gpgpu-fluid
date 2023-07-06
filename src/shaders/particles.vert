@@ -7,6 +7,7 @@ layout(std430, binding=4) buffer Particles {
     vec2 particles[];
 };
 uniform vec2 screen_size;
+uniform float u_time;
 
 const float TAU = 6.2831853071;
 
@@ -44,7 +45,7 @@ void main() {
     //sp.x *= size.x/size.y;
     //sp = sp * 2. - 1.;
 
-    float a = sp.x * TAU;
+    float a = sp.x * TAU + u_time/8.;
     float b = sp.y * TAU / 2.;
     vec3 pos = vec3(
         cos(a) * sin(b),

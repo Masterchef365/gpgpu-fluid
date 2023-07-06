@@ -2,6 +2,7 @@ extern crate glow as gl;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::{channel, Receiver};
+use std::time::Instant;
 
 use anyhow::{bail, format_err, Context as AnyhowContext, Result};
 use gl::HasContext;
@@ -129,6 +130,8 @@ fn main() -> Result<()> {
         let mut dt: Option<f32> = None;
         let mut fingors: HashMap<u64, [f32; 4]> = HashMap::new();
 
+        let time = Instant::now();
+
         // Event loop
         event_loop.run(move |event, _, control_flow| {
             *control_flow = ControlFlow::Wait;
@@ -233,6 +236,11 @@ fn main() -> Result<()> {
                     // Draw particles
                     gl.clear(gl::COLOR_BUFFER_BIT);
                     gl.use_program(Some(hotloader.get_program(particle_shader)));
+
+                    // Set time
+                    let time_loc = gl.get_uniform_location(hotloader.get_program(particle_shader), "u_time");
+                    gl.uniform_1_f32(time_loc.as_ref(), time.elapsed().as_secs_f32());
+
                     let screen_size_loc = gl.get_uniform_location(hotloader.get_program(particle_shader), "screen_size");
                     let (sx, sy) = screen_size;
                     gl.uniform_2_f32(screen_size_loc.as_ref(), sx, sy);
