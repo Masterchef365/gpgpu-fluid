@@ -49,11 +49,12 @@ void main() {
     float b = sp.y * TAU / 2.;
     vec3 pos = vec3(
         cos(a) * sin(b),
-        cos(b),
+        -cos(b),
         sin(a) * sin(b)
     );
+    pos *= 1. + float(idx)/float(particles.length());
 
-    pos.z += 2.;
+    pos.z += 4.2;
 
     mat4 persp = perspective(1., size.x/size.y, 0.01, 1000.);
 
