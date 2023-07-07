@@ -21,8 +21,8 @@ void main() {
 
     bool do_reset = dt == 9999.;
     vec2 size = vec2(imageSize(write_img));
-    bool out_bounds = last_state.x < 0.
-        || last_state.y < 0 
+    bool out_bounds = last_state.x <= 1.
+        || last_state.y <= 1 
         || last_state.x > size.x 
         || last_state.y > size.y;
 
