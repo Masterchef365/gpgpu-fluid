@@ -22,12 +22,14 @@ vec2 gradient(sampler2D img, vec2 pt, vec2 dr, vec2 sample_offset) {
         texture(img, (floor(pt) + vec2(0.5) + vec2(1, 1) + sample_offset) / size).x
     );
 
+    corners = corners.xyzw;
+
     vec2 f = fract(pt);
     vec2 grad = vec2(f.y - 1., f.x - 1.) * corners.x
               + vec2(-f.y, 1. - f.x) * corners.y
               + vec2(1. - f.y, -f.x) * corners.z
               + vec2(f.y, f.x) * corners.w;
-    return grad * float(all(lessThan(abs(dr), vec2(1))));
+    return grad;// * float(all(lessThan(abs(dr), vec2(0.5))));
 }
 
 float advect_component(sampler2D img, vec2 gid, vec2 u_offset, vec2 v_offset, bool comp) {
@@ -38,7 +40,16 @@ float advect_component(sampler2D img, vec2 gid, vec2 u_offset, vec2 v_offset, bo
     vec2 sample_loc = vec2(gid) - dr + sample_offset;
     float next = bilinear(img, sample_loc);
     vec2 c = gradient(img, sample_loc, dr, sample_offset);
-    if (gid.x > imageSize(write_u).x/2) next -= dot(c, dr);
+
+    float l = length(dr);
+
+    if (l > 0.) {
+        // Instability workaround...
+        vec2 v = min(l, 0.15) * normalize(dr);
+        if (gid.x > imageSize(write_u).x/2) 
+            next -= dot(c, v);
+    }
+
     return next;
 }
 
@@ -48,10 +59,12 @@ void main() {
 
 
     if (dt == 9999.) {
+        vec2 vel = vec2(0);
+
         vec2 uv = gid / size;
         uv = fract(uv * vec2(2., 1.));
         uv = uv * 2. - 1.;
-        vec2 vel = vec2(0., 8.)
+        vel += vec2(0., 8.)
             * float(abs(uv.x) < 0.1)
             * float(abs(uv.y) < 0.1);
 
