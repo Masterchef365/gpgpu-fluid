@@ -39,14 +39,11 @@ float cubic_interp(sampler2D img, vec2 pt) {
 }
 
 float interp(sampler2D img, vec2 pt) {
-    return cubic_interp(img, pt);
-    /*
     if (pt.x < float(textureSize(img, 0).x) / 2.) {
         return bilinear(img, pt);
     } else {
         return cubic_interp(img, pt);
     }
-    */
 }
 
 void main() {
@@ -55,6 +52,15 @@ void main() {
 
     if (dt == 9999.) {
         vec2 vel = vec2(0);
+
+        vec2 uv = gid / size;
+        uv = fract(uv * vec2(2., 1.));
+        uv = uv * 2. - 1.;
+        vel += vec2(18., 0.)
+            * float(abs(uv.x) < 0.1)
+            * float(abs(uv.y) < 0.1);
+        if (gid.x * 2. < size.x) vel.x *= -1.;
+
         imageStore(write_u, gid, vec4(vel.x, 0,0,0));
         imageStore(write_v, gid, vec4(vel.y, 0,0,0));
         return;
