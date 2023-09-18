@@ -13,6 +13,42 @@ float bilinear(sampler2D img, vec2 pt) {
     return texture(img, adjusted / size).x;
 }
 
+float cubic_interp(sampler2D img, vec2 pt) {
+    float coeffs[16] = float[16](
+        1./6., -1./2., 1./2., -1./6.,
+        2./3., 0., -1., 1./2.,
+        1./6., 1./2., 1./2., -1./2.,
+        0., 0., 0.0, 1./6.
+    );
+    vec2 fr = fract(pt);
+    ivec2 coord = ivec2(pt);
+    float col = 0.0;
+    for (int i = 0; i < 4; i++) {
+        for (int j = 0; j < 4; j++) {
+            vec2 t = vec2(1.);
+            vec2 B = vec2(0.);
+            for (int k = 0; k < 4; k++) {
+                B += t * vec2(coeffs[i*4+k], coeffs[j*4+k]);
+                t *= fr;
+            }
+            float smp = texelFetch(img, coord + ivec2(i-1, j-1), 0).x;
+            col += smp * B.x * B.y;
+        }
+    }
+    return col;
+}
+
+float interp(sampler2D img, vec2 pt) {
+    return cubic_interp(img, pt);
+    /*
+    if (pt.x < float(textureSize(img, 0).x) / 2.) {
+        return bilinear(img, pt);
+    } else {
+        return cubic_interp(img, pt);
+    }
+    */
+}
+
 void main() {
     ivec2 gid = ivec2(gl_GlobalInvocationID.xy);
     vec2 size = vec2(imageSize(write_u));
@@ -26,16 +62,16 @@ void main() {
 
     // Advect u
     float u, v;
-    u = bilinear(read_u, gid);
-    v = bilinear(read_v, gid + vec2(-0.5, 0.5));
+    u = interp(read_u, gid);
+    v = interp(read_v, gid + vec2(-0.5, 0.5));
     vec2 u_sample_loc = vec2(gid) - vec2(u, v) * dt;
-    float next_u = bilinear(read_u, u_sample_loc).x;
+    float next_u = interp(read_u, u_sample_loc).x;
 
     // Advect v
-    u = bilinear(read_u, gid + vec2(0.5, -0.5)).x;
-    v = bilinear(read_v, gid).x;
+    u = interp(read_u, gid + vec2(0.5, -0.5)).x;
+    v = interp(read_v, gid).x;
     vec2 v_sample_loc = vec2(gid) - vec2(u, v) * dt;
-    float next_v = bilinear(read_v, v_sample_loc).x;
+    float next_v = interp(read_v, v_sample_loc).x;
 
     vec2 vel = vec2(next_u, next_v);
     //vel += float(length(uv) < 0.2) * vec2(0.2, 0);
