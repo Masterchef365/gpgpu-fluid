@@ -50,7 +50,7 @@ vec2 gradient(sampler2D img, vec2 pt) {
             for (int k = 0; k < 4; k++) {
                 vec2 coeff = vec2(coeffs[i*4+k], coeffs[j*4+k]);
                 B += t * coeff;
-                if (k > 0) dB += pow(fr, vec2(k-1.)) * coeff;
+                if (k > 0) dB += float(k) * pow(fr, vec2(k-1.)) * coeff;
                 t *= fr;
             }
             float smp = texelFetch(img, coord + ivec2(i-1, j-1), 0).x;
@@ -68,7 +68,8 @@ float advect_component(sampler2D img, vec2 gid, vec2 u_offset, vec2 v_offset, bo
     vec2 sample_loc = vec2(gid) - dr + sample_offset;
     float next = cubic_interp(img, sample_loc);
     vec2 grad = gradient(img, sample_loc);
-    grad *= vec2(lessThan(abs(dr), vec2(1./2.)));
+    //grad *= vec2(lessThan(abs(dr), vec2(1./2.)));
+    grad *= float(length(dr) < 1./2.);
 
     next -= dot(grad, dr);
 
