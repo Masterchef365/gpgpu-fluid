@@ -67,19 +67,10 @@ float advect_component(sampler2D img, vec2 gid, vec2 u_offset, vec2 v_offset, bo
     vec2 sample_offset = (comp ? u_offset : v_offset);
     vec2 sample_loc = vec2(gid) - dr + sample_offset;
     float next = cubic_interp(img, sample_loc);
-    vec2 c = gradient(img, sample_loc);
+    vec2 grad = gradient(img, sample_loc);
+    grad *= vec2(lessThan(abs(dr), vec2(1./2.)));
 
-    float l = length(dr);
-
-    /*
-    if (l > 0.) {
-        // Instability workaround...
-        vec2 v = min(l, 0.15) * normalize(dr);
-        if (gid.x > imageSize(write_u).x/2) 
-            next -= dot(c, v);
-    }
-    */
-    next -= dot(c, dr);
+    next -= dot(grad, dr);
 
     return next;
 }
