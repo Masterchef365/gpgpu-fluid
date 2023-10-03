@@ -68,10 +68,9 @@ float advect_component(sampler2D img, vec2 gid, vec2 u_offset, vec2 v_offset, bo
     vec2 sample_loc = vec2(gid) - dr + sample_offset;
     float next = cubic_interp(img, sample_loc);
     vec2 grad = gradient(img, sample_loc);
-    //grad *= vec2(lessThan(abs(dr), vec2(1./2.)));
-    grad *= float(length(dr) < 1./2.);
+    grad *= vec2(lessThan(abs(dr), vec2(1./2.)));
 
-    next -= dot(grad, dr);
+    next += dot(grad, dr)*3.;
 
     return next;
 }
