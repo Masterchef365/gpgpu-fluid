@@ -7,56 +7,99 @@ uniform layout(binding=2, r32f) restrict image2D write_u;
 uniform layout(binding=3, r32f) restrict image2D write_v;
 uniform layout(location=0) float dt;
 
-float bilinear(sampler2D img, vec2 pt) {
-    vec2 size = imageSize(write_u);
-    vec2 tex_coord = (pt + vec2(0.5)) / size;
-    return texture(img, tex_coord).x;
+float cubic_interp(sampler2D img, vec2 pt) {
+    float coeffs[16] = float[16](
+        1./6., -1./2., 1./2., -1./6.,
+        2./3., 0., -1., 1./2.,
+        1./6., 1./2., 1./2., -1./2.,
+        0., 0., 0.0, 1./6.
+    );
+    vec2 fr = fract(pt);
+    ivec2 coord = ivec2(pt);
+    float col = 0.0;
+    for (int i = 0; i < 4; i++) {
+        for (int j = 0; j < 4; j++) {
+            vec2 t = vec2(1.);
+            vec2 B = vec2(0.);
+            for (int k = 0; k < 4; k++) {
+                B += t * vec2(coeffs[i*4+k], coeffs[j*4+k]);
+                t *= fr;
+            }
+            float smp = texelFetch(img, coord + ivec2(i-1, j-1), 0).x;
+            col += smp * B.x * B.y;
+        }
+    }
+    return col;
 }
 
-vec2 gradient(sampler2D img, vec2 pt, vec2 dr, vec2 sample_offset) {
-    vec2 size = imageSize(write_u);
-    vec4 corners = vec4(
-        texture(img, (floor(pt) + vec2(0.5) + vec2(0, 0) + sample_offset) / size).x,
-        texture(img, (floor(pt) + vec2(0.5) + vec2(0, 1) + sample_offset) / size).x,
-        texture(img, (floor(pt) + vec2(0.5) + vec2(1, 0) + sample_offset) / size).x,
-        texture(img, (floor(pt) + vec2(0.5) + vec2(1, 1) + sample_offset) / size).x
+vec2 gradient(sampler2D img, vec2 pt) {
+    float coeffs[16] = float[16](
+        1./6., -1./2., 1./2., -1./6.,
+        2./3., 0., -1., 1./2.,
+        1./6., 1./2., 1./2., -1./2.,
+        0., 0., 0.0, 1./6.
     );
-
-    corners = corners.xyzw;
-
-    vec2 f = fract(pt);
-    vec2 grad = vec2(f.y - 1., f.x - 1.) * corners.x
-              + vec2(-f.y, 1. - f.x) * corners.y
-              + vec2(1. - f.y, -f.x) * corners.z
-              + vec2(f.y, f.x) * corners.w;
-    return grad;// * float(all(lessThan(abs(dr), vec2(0.5))));
+    vec2 fr = fract(pt);
+    ivec2 coord = ivec2(pt);
+    vec2 grad = vec2(0.0);
+    for (int i = 0; i < 4; i++) {
+        for (int j = 0; j < 4; j++) {
+            vec2 t = vec2(1.);
+            vec2 B = vec2(0.);
+            vec2 dB = vec2(0.);
+            for (int k = 0; k < 4; k++) {
+                vec2 coeff = vec2(coeffs[i*4+k], coeffs[j*4+k]);
+                B += t * coeff;
+                if (k > 0) dB += pow(fr, vec2(k-1.)) * coeff;
+                t *= fr;
+            }
+            float smp = texelFetch(img, coord + ivec2(i-1, j-1), 0).x;
+            grad += smp * (dB.xy * B.yx);
+        }
+    }
+    return grad;
 }
 
 float advect_component(sampler2D img, vec2 gid, vec2 u_offset, vec2 v_offset, bool comp) {
-    float u = bilinear(read_u, gid + u_offset);
-    float v = bilinear(read_v, gid + v_offset);
+    float u = cubic_interp(read_u, gid + u_offset);
+    float v = cubic_interp(read_v, gid + v_offset);
     vec2 dr = vec2(u, v) * dt;
     vec2 sample_offset = (comp ? u_offset : v_offset);
     vec2 sample_loc = vec2(gid) - dr + sample_offset;
-    float next = bilinear(img, sample_loc);
-    vec2 c = gradient(img, sample_loc, dr, sample_offset);
+    float next = cubic_interp(img, sample_loc);
+    vec2 c = gradient(img, sample_loc);
 
     float l = length(dr);
 
+    /*
     if (l > 0.) {
         // Instability workaround...
         vec2 v = min(l, 0.15) * normalize(dr);
         if (gid.x > imageSize(write_u).x/2) 
             next -= dot(c, v);
     }
+    */
+    next -= dot(c, dr);
 
     return next;
+}
+
+
+
+float interp(sampler2D img, vec2 pt) {
+    return cubic_interp(img, pt);
+    /*
+    if (pt.x < float(textureSize(img, 0).x) / 2.) {
+        return cubic_interp(img, pt);
+    } else {
+        return cubic_interp(img, pt);
+    }
+    */
 }
 
 void main() {
     ivec2 gid = ivec2(gl_GlobalInvocationID.xy);
     vec2 size = vec2(imageSize(write_u));
-
 
     if (dt == 9999.) {
         vec2 vel = vec2(0);
