@@ -52,7 +52,7 @@ void main() {
         float dF = (dx + dy) / 4;
 
         // Factor must be <2. Forces convergence
-        const float OVERSTEP = 1.9;
+        float OVERSTEP = mix(1., 2.02, cos(float(gid.x)/50.) / 2. + 0.5);
         dF *= OVERSTEP;
 
         // Write next state
