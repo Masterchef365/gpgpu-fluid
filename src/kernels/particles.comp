@@ -47,7 +47,7 @@ void main() {
         vec2 r = vec2(cos(j), sin(j));
 
         vec2 pseudocoord = vec2(idx, 3240.)/1e3;
-        r /= pow(floor(rand(pseudocoord) * 8.), 1./3.);
+        r *= sqrt(rand(pseudocoord));
 
         r.x *= size.y/size.x;
         r = size * (r + 1.) / 2.;
