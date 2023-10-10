@@ -52,7 +52,7 @@ void main() {
         float dF = (dx + dy) / 4;
 
         // Factor must be <2. Forces convergence
-        float OVERSTEP = mix(1., 2.02, cos(float(gid.x)/50.) / 2. + 0.5);
+        float OVERSTEP = 2.01;//mix(1., 2.02, sin(2.*3.1415*float(gid.x)/float(size.x)) / 2. + 0.5);
         dF *= OVERSTEP;
 
         // Write next state
