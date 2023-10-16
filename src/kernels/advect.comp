@@ -57,6 +57,22 @@ void main() {
         )[i];
     }
 
+    float k = 13.;
+    mat4 boongle = mat4(
+        k, -1., 0., 0., 
+        1., k, -1., 0., 
+        0., 1., k,  0., 
+        -1., 0., 1., k 
+    );
+
+
+    boongle /= k;
+
+    //for (int i = 0; i < 4; i++)
+        //boongle[i] = normalize(boongle[i]);
+
+    next_u *= boongle;
+    next_v *= boongle;
 
     imageStore(write_u, gid, next_u);
     imageStore(write_v, gid, next_v);

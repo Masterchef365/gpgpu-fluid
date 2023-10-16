@@ -35,10 +35,6 @@ void main() {
         vel_y = vec4(0.);
     }
 
-    vec4 fonky = vec4(1., 1. - 1e-5, 1. - 2e-5, 1. - 3e-5);
-    vel_x *= fonky;
-    vel_y *= fonky;
-
     imageStore(read_u, xy, vel_x);
     imageStore(read_v, xy, vel_y);
 }
