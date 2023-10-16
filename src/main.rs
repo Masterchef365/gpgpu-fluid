@@ -20,6 +20,8 @@ const INITIAL_DT: f32 = 0.1;
 const LEFT_RIGHT_DELTA_DT: f32 = INITIAL_DT;
 const UP_DOWN_DELTA_DT: f32 = INITIAL_DT * 10.;
 
+const VEL_MEM_FMT: u32 = gl::RGBA32F;
+
 const CLEAR_DT: f32 = 9999.;
 
 const MOUSE_IDX: u64 = 0;
@@ -87,7 +89,10 @@ fn main() -> Result<()> {
             )
             .unwrap();
         let draw_kernel = hotloader
-            .add_program(&gl, vec![(gl::COMPUTE_SHADER, "src/kernels/draw.comp".into())])
+            .add_program(
+                &gl,
+                vec![(gl::COMPUTE_SHADER, "src/kernels/draw.comp".into())],
+            )
             .unwrap();
 
         // Set up textures
@@ -97,7 +102,7 @@ fn main() -> Result<()> {
             gl.tex_image_2d(
                 gl::TEXTURE_2D,
                 0,
-                gl::R32F as _,
+                VEL_MEM_FMT as _,
                 WIDTH,
                 HEIGHT,
                 0,
@@ -152,11 +157,11 @@ fn main() -> Result<()> {
 
                         gl.uniform_1_u32(parity_loc.as_ref(), parity);
                         // Set read textures
-                        gl.bind_image_texture(0, read_u, 0, false, 0, gl::READ_WRITE, gl::R32F);
-                        gl.bind_image_texture(1, read_v, 0, false, 0, gl::READ_WRITE, gl::R32F);
+                        gl.bind_image_texture(0, read_u, 0, false, 0, gl::READ_WRITE, VEL_MEM_FMT);
+                        gl.bind_image_texture(1, read_v, 0, false, 0, gl::READ_WRITE, VEL_MEM_FMT);
                         // Set write textures
-                        gl.bind_image_texture(2, write_u, 0, false, 0, gl::READ_WRITE, gl::R32F);
-                        gl.bind_image_texture(3, write_v, 0, false, 0, gl::READ_WRITE, gl::R32F);
+                        gl.bind_image_texture(2, write_u, 0, false, 0, gl::READ_WRITE, VEL_MEM_FMT);
+                        gl.bind_image_texture(3, write_v, 0, false, 0, gl::READ_WRITE, VEL_MEM_FMT);
 
                         // Run kernel
                         gl.dispatch_compute(
@@ -179,10 +184,11 @@ fn main() -> Result<()> {
                     gl.active_texture(gl::TEXTURE1);
                     gl.bind_texture(gl::TEXTURE_2D, Some(read_v));
                     // Set write textures
-                    gl.bind_image_texture(2, write_u, 0, false, 0, gl::READ_WRITE, gl::R32F);
-                    gl.bind_image_texture(3, write_v, 0, false, 0, gl::READ_WRITE, gl::R32F);
+                    gl.bind_image_texture(2, write_u, 0, false, 0, gl::READ_WRITE, VEL_MEM_FMT);
+                    gl.bind_image_texture(3, write_v, 0, false, 0, gl::READ_WRITE, VEL_MEM_FMT);
                     // Set dt
-                    let dt_loc = gl.get_uniform_location(hotloader.get_program(advect_kernel), "dt");
+                    let dt_loc =
+                        gl.get_uniform_location(hotloader.get_program(advect_kernel), "dt");
                     gl.uniform_1_f32(dt_loc.as_ref(), dt.unwrap_or(CLEAR_DT));
                     gl.dispatch_compute((WIDTH / LOCAL_SIZE) as _, (HEIGHT / LOCAL_SIZE) as _, 1);
                     // Memory barrier for vertex shader
@@ -194,18 +200,20 @@ fn main() -> Result<()> {
                     // Execute touch/mouse drawing kernel
                     gl.use_program(Some(hotloader.get_program(draw_kernel)));
                     // Set read textures
-                    gl.bind_image_texture(0, read_u, 0, false, 0, gl::READ_WRITE, gl::R32F);
-                    gl.bind_image_texture(1, read_v, 0, false, 0, gl::READ_WRITE, gl::R32F);
+                    gl.bind_image_texture(0, read_u, 0, false, 0, gl::READ_WRITE, VEL_MEM_FMT);
+                    gl.bind_image_texture(1, read_v, 0, false, 0, gl::READ_WRITE, VEL_MEM_FMT);
                     // Set pens
                     let mut pen_keys: Vec<u64> = fingors.keys().copied().collect();
                     pen_keys.sort();
                     let mut pens: Vec<f32> =
                         pen_keys.iter().map(|id| fingors[id]).flatten().collect();
                     pens.resize(4 * MAX_FINGIES, 0.);
-                    let pen_loc = gl.get_uniform_location(hotloader.get_program(draw_kernel), "pens");
+                    let pen_loc =
+                        gl.get_uniform_location(hotloader.get_program(draw_kernel), "pens");
                     gl.uniform_4_f32_slice(pen_loc.as_ref(), &pens);
                     // Set screen size
-                    let screen_size_loc = gl.get_uniform_location(hotloader.get_program(draw_kernel), "screen_size");
+                    let screen_size_loc =
+                        gl.get_uniform_location(hotloader.get_program(draw_kernel), "screen_size");
                     let (sx, sy) = screen_size;
                     gl.uniform_2_f32(screen_size_loc.as_ref(), sx, sy);
                     gl.dispatch_compute((WIDTH / LOCAL_SIZE) as _, (HEIGHT / LOCAL_SIZE) as _, 1);
@@ -218,12 +226,13 @@ fn main() -> Result<()> {
                     gl.active_texture(gl::TEXTURE1);
                     gl.bind_texture(gl::TEXTURE_2D, Some(read_v));
                     // Set write textures
-                    gl.bind_image_texture(2, write_u, 0, false, 0, gl::READ_WRITE, gl::R32F);
-                    gl.bind_image_texture(3, write_v, 0, false, 0, gl::READ_WRITE, gl::R32F);
+                    gl.bind_image_texture(2, write_u, 0, false, 0, gl::READ_WRITE, VEL_MEM_FMT);
+                    gl.bind_image_texture(3, write_v, 0, false, 0, gl::READ_WRITE, VEL_MEM_FMT);
                     // Set particle buffer
                     gl.bind_buffer_base(gl::SHADER_STORAGE_BUFFER, 4, Some(particle_buffer));
                     // Set dt
-                    let dt_loc = gl.get_uniform_location(hotloader.get_program(particle_kernel), "dt");
+                    let dt_loc =
+                        gl.get_uniform_location(hotloader.get_program(particle_kernel), "dt");
                     gl.uniform_1_f32(dt_loc.as_ref(), dt.unwrap_or(CLEAR_DT));
                     // Dispatch
                     gl.dispatch_compute(N_PARTICLES as u32, 1, 1);
@@ -233,7 +242,10 @@ fn main() -> Result<()> {
                     // Draw particles
                     gl.clear(gl::COLOR_BUFFER_BIT);
                     gl.use_program(Some(hotloader.get_program(particle_shader)));
-                    let screen_size_loc = gl.get_uniform_location(hotloader.get_program(particle_shader), "screen_size");
+                    let screen_size_loc = gl.get_uniform_location(
+                        hotloader.get_program(particle_shader),
+                        "screen_size",
+                    );
                     let (sx, sy) = screen_size;
                     gl.uniform_2_f32(screen_size_loc.as_ref(), sx, sy);
                     gl.bind_vertex_array(Some(particle_vertex_array));
@@ -287,7 +299,9 @@ fn main() -> Result<()> {
                         _ => (),
                     },
                     WindowEvent::KeyboardInput { input, .. } => {
-                        if let (Some(key), ElementState::Pressed) = (input.virtual_keycode, input.state) {
+                        if let (Some(key), ElementState::Pressed) =
+                            (input.virtual_keycode, input.state)
+                        {
                             match key {
                                 VirtualKeyCode::Space => dt = None,
                                 VirtualKeyCode::Up => dt = dt.map(|dt| dt - UP_DOWN_DELTA_DT),

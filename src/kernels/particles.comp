@@ -3,7 +3,7 @@ layout (local_size_x = 32) in;
 
 uniform layout(binding=0) sampler2D read_u;
 uniform layout(binding=1) sampler2D read_v;
-uniform layout(binding=2, r32f) image2D write_img;
+uniform layout(binding=2, rgba32f) image2D write_img;
 layout(std430, binding=4) buffer Particles {
     vec2 particles[];
 };
@@ -56,9 +56,11 @@ void main() {
     }
 
     vec2 uv = particles[idx] / imageSize(write_img);
-    float vel_u = texture(read_u, uv).x;
-    float vel_v = texture(read_v, uv).x;
-    vec2 vel = vec2(vel_u, vel_v);
+    vec4 vel_u = texture(read_u, uv);
+    vec4 vel_v = texture(read_v, uv);
+
+    uint i = idx % 4;
+    vec2 vel = vec2(vel_u[i], vel_v[i]);
 
     particles[idx] += vel * dt;
 }

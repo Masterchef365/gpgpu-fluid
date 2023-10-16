@@ -3,14 +3,14 @@ layout (local_size_x = 32, local_size_y = 32) in;
 
 uniform layout(binding=0) sampler2D read_u;
 uniform layout(binding=1) sampler2D read_v;
-uniform layout(binding=2, r32f) restrict image2D write_u;
-uniform layout(binding=3, r32f) restrict image2D write_v;
+uniform layout(binding=2, rgba32f) restrict image2D write_u;
+uniform layout(binding=3, rgba32f) restrict image2D write_v;
 uniform layout(location=0) float dt;
 
-float bilinear(sampler2D img, vec2 pt) {
+vec4 bilinear(sampler2D img, vec2 pt) {
     vec2 size = imageSize(write_u);
     vec2 adjusted = pt + vec2(0.5);
-    return texture(img, adjusted / size).x;
+    return texture(img, adjusted / size);
 }
 
 void main() {
@@ -19,28 +19,45 @@ void main() {
 
     if (dt == 9999.) {
         vec2 vel = vec2(0);
-        imageStore(write_u, gid, vec4(vel.x, 0,0,0));
-        imageStore(write_v, gid, vec4(vel.y, 0,0,0));
+        imageStore(write_u, gid, vec4(vel.x));
+        imageStore(write_v, gid, vec4(vel.y));
         return;
     }
 
-    // Advect u
-    float u, v;
-    u = bilinear(read_u, gid);
-    v = bilinear(read_v, gid + vec2(-0.5, 0.5));
-    vec2 u_sample_loc = vec2(gid) - vec2(u, v) * dt;
-    float next_u = bilinear(read_u, u_sample_loc).x;
+    // Advect dx
+    vec4 dx, dy;
+    dx = bilinear(read_u, gid);
+    dy = bilinear(read_v, gid + vec2(-0.5, 0.5));
+    vec4 u_sample_loc_x = float(gid.x) - dx * dt;
+    vec4 u_sample_loc_y = float(gid.y) - dy * dt;
+    vec4 next_u;
+    for (int i = 0; i < 4; i++) {
+        next_u[i] = bilinear(
+            read_u, 
+            vec2(
+                u_sample_loc_x[i], 
+                u_sample_loc_y[i]
+            )
+        )[i];
+    }
 
-    // Advect v
-    u = bilinear(read_u, gid + vec2(0.5, -0.5)).x;
-    v = bilinear(read_v, gid).x;
-    vec2 v_sample_loc = vec2(gid) - vec2(u, v) * dt;
-    float next_v = bilinear(read_v, v_sample_loc).x;
+    // Advect dy
+    dx = bilinear(read_u, gid);
+    dy = bilinear(read_v, gid + vec2(-0.5, 0.5));
+    vec4 v_sample_loc_x = float(gid.x) - dx * dt;
+    vec4 v_sample_loc_y = float(gid.y) - dy * dt;
+    vec4 next_v;
+    for (int i = 0; i < 4; i++) {
+        next_v[i] = bilinear(
+            read_v, 
+            vec2(
+                v_sample_loc_x[i], 
+                v_sample_loc_y[i]
+            )
+        )[i];
+    }
 
-    vec2 vel = vec2(next_u, next_v);
-    //vel += float(length(uv) < 0.2) * vec2(0.2, 0);
 
-    // Write semi-lagrangian calc
-    imageStore(write_u, gid, vec4(vel.x, 0,0,0));
-    imageStore(write_v, gid, vec4(vel.y, 0,0,0));
+    imageStore(write_u, gid, next_u);
+    imageStore(write_v, gid, next_v);
 }

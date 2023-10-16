@@ -1,8 +1,8 @@
 #version 450
 layout (local_size_x = 32, local_size_y = 32) in;
 
-uniform layout(binding=0, r32f) restrict image2D read_u;
-uniform layout(binding=1, r32f) restrict image2D read_v;
+uniform layout(binding=0, rgba32f) restrict image2D read_u;
+uniform layout(binding=1, rgba32f) restrict image2D read_v;
 const uint MAX_FINGIES = 5;
 uniform layout(location=1) vec4 pens[MAX_FINGIES];
 uniform vec2 screen_size;
@@ -13,10 +13,8 @@ void main() {
     ivec2 xy = ivec2(gl_GlobalInvocationID.xy);
     vec2 size = vec2(imageSize(read_u));
 
-    vec2 vel = vec2(
-        imageLoad(read_u, xy).x,
-        imageLoad(read_v, xy).x
-    );
+    vec4 vel_x = imageLoad(read_u, xy);
+    vec4 vel_y = imageLoad(read_v, xy);
 
     for (int i = 0; i < MAX_FINGIES; i++) {
         vec2 pen_pos = (vec2(0., 1.) - pens[i].xy) * size * vec2(-1, 1);
@@ -24,20 +22,24 @@ void main() {
         pen_pos.x /= min(screen_size.x, screen_size.y)/screen_size.x;
         vec2 pen_vel = pens[i].zw * size * vec2(1, -1);
         float pen_dist = distance(xy, pen_pos);
-        //vel += float(length(pen_pos) < PEN_RADIUS) * pen.zw;
         float screen_size = max(size.x, size.y);
         float pen_radius = screen_size * PEN_SIZE;
         if (pen_dist < pen_radius) {
-            vel += pen_vel;
+            vel_x += pen_vel.x;
+            vel_y += pen_vel.y;
         }
     }
 
     if (any(lessThan(xy, ivec2(1))) || any(greaterThan(xy, size-1))) {
-        vel = vec2(0);
+        vel_x = vec4(0.);
+        vel_y = vec4(0.);
     }
 
-    // Write semi-lagrangian calc
-    imageStore(read_u, xy, vec4(vel.x, 0,0,0));
-    imageStore(read_v, xy, vec4(vel.y, 0,0,0));
+    vec4 fonky = vec4(1., 1. - 1e-5, 1. - 2e-5, 1. - 3e-5);
+    vel_x *= fonky;
+    vel_y *= fonky;
+
+    imageStore(read_u, xy, vel_x);
+    imageStore(read_v, xy, vel_y);
 }
 

@@ -13,7 +13,7 @@ out float f_idx;
 
 void main() {
     int idx = gl_VertexID;
-    f_idx = float(idx) / float(particles.length());
+    f_idx = float(idx);// / float(particles.length());
 
     vec2 size = vec2(imageSize(write_img));
     vert = particles[idx] / size;
