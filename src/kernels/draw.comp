@@ -28,7 +28,7 @@ void main() {
         float screen_size = max(size.x, size.y);
         float pen_radius = screen_size * PEN_SIZE;
         if (pen_dist < pen_radius) {
-            vel += pen_vel;
+            vel += pen_vel * (pen_radius - pen_dist) / pen_radius;
         }
     }
 
