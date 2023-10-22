@@ -126,6 +126,7 @@ fn main() -> Result<()> {
         gl.blend_func(gl::SRC_ALPHA, gl::ONE);
         //gl.enable(gl::VERTEX_PROGRAM_POINT_SIZE);
 
+        let mut advect_enabled = true;
         let mut dt: Option<f32> = None;
         let mut fingors: HashMap<u64, [f32; 4]> = HashMap::new();
 
@@ -171,25 +172,27 @@ fn main() -> Result<()> {
                         std::mem::swap(&mut read_v, &mut write_v);
                     }
 
-                    // Execute advection kernel
-                    gl.use_program(Some(hotloader.get_program(advect_kernel)));
-                    // Set read textures
-                    gl.active_texture(gl::TEXTURE0);
-                    gl.bind_texture(gl::TEXTURE_2D, Some(read_u));
-                    gl.active_texture(gl::TEXTURE1);
-                    gl.bind_texture(gl::TEXTURE_2D, Some(read_v));
-                    // Set write textures
-                    gl.bind_image_texture(2, write_u, 0, false, 0, gl::READ_WRITE, gl::R32F);
-                    gl.bind_image_texture(3, write_v, 0, false, 0, gl::READ_WRITE, gl::R32F);
-                    // Set dt
-                    let dt_loc = gl.get_uniform_location(hotloader.get_program(advect_kernel), "dt");
-                    gl.uniform_1_f32(dt_loc.as_ref(), dt.unwrap_or(CLEAR_DT));
-                    gl.dispatch_compute((WIDTH / LOCAL_SIZE) as _, (HEIGHT / LOCAL_SIZE) as _, 1);
-                    // Memory barrier for vertex shader
-                    gl.memory_barrier(gl::SHADER_IMAGE_ACCESS_BARRIER_BIT);
+                    if advect_enabled {
+                        // Execute advection kernel
+                        gl.use_program(Some(hotloader.get_program(advect_kernel)));
+                        // Set read textures
+                        gl.active_texture(gl::TEXTURE0);
+                        gl.bind_texture(gl::TEXTURE_2D, Some(read_u));
+                        gl.active_texture(gl::TEXTURE1);
+                        gl.bind_texture(gl::TEXTURE_2D, Some(read_v));
+                        // Set write textures
+                        gl.bind_image_texture(2, write_u, 0, false, 0, gl::READ_WRITE, gl::R32F);
+                        gl.bind_image_texture(3, write_v, 0, false, 0, gl::READ_WRITE, gl::R32F);
+                        // Set dt
+                        let dt_loc = gl.get_uniform_location(hotloader.get_program(advect_kernel), "dt");
+                        gl.uniform_1_f32(dt_loc.as_ref(), dt.unwrap_or(CLEAR_DT));
+                        gl.dispatch_compute((WIDTH / LOCAL_SIZE) as _, (HEIGHT / LOCAL_SIZE) as _, 1);
+                        // Memory barrier for vertex shader
+                        gl.memory_barrier(gl::SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
-                    std::mem::swap(&mut read_u, &mut write_u);
-                    std::mem::swap(&mut read_v, &mut write_v);
+                        std::mem::swap(&mut read_u, &mut write_u);
+                        std::mem::swap(&mut read_v, &mut write_v);
+                    }
 
                     // Execute touch/mouse drawing kernel
                     gl.use_program(Some(hotloader.get_program(draw_kernel)));
@@ -294,6 +297,7 @@ fn main() -> Result<()> {
                                 VirtualKeyCode::Down => dt = dt.map(|dt| dt + UP_DOWN_DELTA_DT),
                                 VirtualKeyCode::Left => dt = dt.map(|dt| dt - LEFT_RIGHT_DELTA_DT),
                                 VirtualKeyCode::Right => dt = dt.map(|dt| dt + LEFT_RIGHT_DELTA_DT),
+                                VirtualKeyCode::A => advect_enabled = !advect_enabled,
                                 _ => (),
                             }
                         }
