@@ -15,6 +15,34 @@ float rand(vec2 co){
 
 const float PI = 3.1415926;
 
+float cubic_interp(sampler2D img, vec2 pt) {
+    pt *= vec2(imageSize(write_img).xy); 
+    float coeffs[16] = float[16](
+        1./6., -1./2., 1./2., -1./6.,
+        2./3., 0., -1., 1./2.,
+        1./6., 1./2., 1./2., -1./2.,
+        0., 0., 0.0, 1./6.
+    );
+    vec2 fr = fract(pt);
+    ivec2 coord = ivec2(pt);
+    float col = 0.0;
+    for (int i = 0; i < 4; i++) {
+        for (int j = 0; j < 4; j++) {
+            vec2 t = vec2(1.);
+            vec2 B = vec2(0.);
+            for (int k = 0; k < 4; k++) {
+                B += t * vec2(coeffs[i*4+k], coeffs[j*4+k]);
+                t *= fr;
+            }
+            float smp = texelFetch(img, coord + ivec2(i-1, j-1), 0).x;
+            col += smp * B.x * B.y;
+        }
+    }
+    return col;
+}
+
+
+
 void main() {
     uint idx = gl_GlobalInvocationID.x;
     vec2 last_state = particles[idx];
@@ -56,8 +84,8 @@ void main() {
     }
 
     vec2 uv = particles[idx] / imageSize(write_img);
-    float vel_u = texture(read_u, uv).x;
-    float vel_v = texture(read_v, uv).x;
+    float vel_u = cubic_interp(read_u, uv).x;
+    float vel_v = cubic_interp(read_v, uv).x;
     vec2 vel = vec2(vel_u, vel_v);
 
     particles[idx] += vel * dt;
