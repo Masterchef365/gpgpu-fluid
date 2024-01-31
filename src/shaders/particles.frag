@@ -13,6 +13,10 @@ out vec4 out_color;
 
 vec3 hsv2rgb(vec3 c);
 
+float rand(vec2 co){
+    return fract(sin(dot(co, vec2(12.9898, 78.233))) * 437.5453);
+}
+
 void main() {
     const float k = 10.;
     float u = texture(read_u, vert).x / k;
@@ -27,7 +31,23 @@ void main() {
     ) / 3.;
     */
 
-    vec3 color = hsv2rgb(vec3(fract((f_idx - 0.5) * 1.), 0.95, 1.));
+    float hue = fract(f_idx - 0.5);
+    float sat = cos(f_idx * 100.);
+    float val = sin(f_idx * 1000.);
+
+    sat = mix(0.9, 1., sat / 2. + 0.5);
+    //val = mix(0., 1., val / 2. + 0.5);
+    val = float(val > 0.);
+
+    /*
+    float r1 = rand(vec2(f_idx, 0.129301));
+    r1 = mix(f_idx, 1., r1);
+
+    float r2 = rand(vec2(f_idx, 9.830240));
+    r2 = mix(0.0, 1., r2);
+    */
+
+    vec3 color = hsv2rgb(vec3(hue, sat, val));
 
     out_color = vec4(color, 1.);
 }

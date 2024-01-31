@@ -126,7 +126,7 @@ fn main() -> Result<()> {
         //gl.enable(gl::BLEND);
         gl.disable(gl::BLEND);
         gl.blend_func(gl::SRC_ALPHA, gl::ONE);
-        //gl.enable(gl::VERTEX_PROGRAM_POINT_SIZE);
+        gl.enable(gl::VERTEX_PROGRAM_POINT_SIZE);
 
         let mut dt: Option<f32> = None;
         let mut fingors: HashMap<u64, [f32; 4]> = HashMap::new();
