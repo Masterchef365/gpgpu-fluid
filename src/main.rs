@@ -120,11 +120,11 @@ fn main() -> Result<()> {
         let mut write_v = texture()?;
 
         let mut toggle_clear = true;
+        let mut toggle_blend = false;
 
         // Set up GL state
         gl.clear_color(0., 0., 0., 1.0);
         //gl.enable(gl::BLEND);
-        gl.disable(gl::BLEND);
         gl.blend_func(gl::SRC_ALPHA, gl::ONE);
         //gl.enable(gl::VERTEX_PROGRAM_POINT_SIZE);
 
@@ -236,6 +236,13 @@ fn main() -> Result<()> {
                     if toggle_clear {
                         gl.clear(gl::COLOR_BUFFER_BIT);
                     }
+
+                    if toggle_blend {
+                        gl.enable(gl::BLEND);
+                    } else {
+                        gl.disable(gl::BLEND);
+                    }
+
                     gl.use_program(Some(hotloader.get_program(particle_shader)));
                     let screen_size_loc = gl.get_uniform_location(hotloader.get_program(particle_shader), "screen_size");
                     let (sx, sy) = screen_size;
@@ -299,6 +306,7 @@ fn main() -> Result<()> {
                                 VirtualKeyCode::Left => dt = dt.map(|dt| dt - LEFT_RIGHT_DELTA_DT),
                                 VirtualKeyCode::Right => dt = dt.map(|dt| dt + LEFT_RIGHT_DELTA_DT),
                                 VirtualKeyCode::C => toggle_clear ^= true,
+                                VirtualKeyCode::B => toggle_blend ^= true,
                                 _ => (),
                             }
                         }
